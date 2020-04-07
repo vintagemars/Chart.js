@@ -3,7 +3,7 @@
 
 <head>
 	<title>Min/Max Settings</title>
-	<script src="../../../dist/Chart.min.js"></script>
+	<script src="../../../dist/Chart.bundle.js"></script>
 	<script src="../../utils.js"></script>
 	<style>
 		canvas{
@@ -44,10 +44,12 @@
 					text: 'Min and Max Settings'
 				},
 				scales: {
-					y: {
-						min: 10,
-						max: 50
-					}
+					yAxes: [{
+						ticks: {
+							min: 10,
+							max: 50
+						}
+					}]
 				}
 			}
 		};

@@ -53,8 +53,8 @@
                 "padding": 40
             },
             "scales": {
-                "x": {"display": false},
-                "y": {"display": false}
+                "xAxes": [{"display": false}],
+                "yAxes": [{"display": false}]
             }
         }
     },

@@ -8,10 +8,10 @@ Both [line](line.md) and [radar](radar.md) charts support a `fill` option on the
 
 | Mode | Type | Values |
 | :--- | :--- | :--- |
-| Absolute dataset index <sup>1</sup> | `number` | `1`, `2`, `3`, ... |
-| Relative dataset index <sup>1</sup> | `string` | `'-1'`, `'-2'`, `'+1'`, ... |
-| Boundary <sup>2</sup> | `string` | `'start'`, `'end'`, `'origin'` |
-| Disabled <sup>3</sup> | `boolean` | `false` |
+| Absolute dataset index <sup>1</sup> | `Number` | `1`, `2`, `3`, ... |
+| Relative dataset index <sup>1</sup> | `String` | `'-1'`, `'-2'`, `'+1'`, ... |
+| Boundary <sup>2</sup> | `String` | `'start'`, `'end'`, `'origin'` |
+| Disabled <sup>3</sup> | `Boolean` | `false` |
 
 > <sup>1</sup> dataset filling modes have been introduced in version 2.6.0<br>
 > <sup>2</sup> prior version 2.6.0, boundary values was `'zero'`, `'top'`, `'bottom'` (deprecated)<br>
@@ -29,41 +29,16 @@ new Chart(ctx, {
             {fill: '-2'}           // 4: fill to dataset 2
         ]
     }
-});
-```
-
-If you need to support multiple colors when filling from one dataset to another, you may specify an object with the following option :
-
-| Param | Type | Description |
-| :--- | :--- | :--- |
-| `target` | `number`, `string`, `boolean` | The accepted values are the same as the filling mode values, so you may use absolute and relative dataset indexes and/or boundaries. |
-| `above` | `Color` | If no color is set, the default color will be the background color of the chart. |
-| `below` | `Color` | Same as the above. |
-
-**Example**
-```javascript
-new Chart(ctx, {
-    data: {
-        datasets: [
-            {
-              fill: {
-                target: 'origin',
-                above: 'rgb(255, 0, 0)',   // Area will be red above the origin
-                below: 'rgb(0, 0, 255)'    // And blue below the origin
-              }
-            }
-        ]
-    }
-});
+})
 ```
 
 ## Configuration
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| [`plugins.filler.propagate`](#propagate) | `boolean` | `true` | Fill propagation when target is hidden.
+| [`plugins.filler.propagate`](#propagate) | `Boolean` | `true` | Fill propagation when target is hidden
 
 ### propagate
-`propagate` takes a `boolean` value (default: `true`).
+Boolean (default: `true`)
 
 If `true`, the fill area will be recursively extended to the visible target defined by the `fill` value of hidden dataset targets:
 
@@ -86,7 +61,7 @@ new Chart(ctx, {
             }
         }
     }
-});
+})
 ```
 
 `propagate: true`:

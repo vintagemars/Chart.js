@@ -1,51 +1,42 @@
-import defaults from '../core/core.defaults';
-import Element from '../core/core.element';
-import helpers from '../helpers/index';
-import layouts from '../core/core.layouts';
+'use strict';
 
-defaults.set('title', {
-	align: 'center',
-	display: false,
-	fontStyle: 'bold',
-	fullWidth: true,
-	padding: 10,
-	position: 'top',
-	text: '',
-	weight: 2000         // by default greater than legend (1000) to be above
+var defaults = require('../core/core.defaults');
+var Element = require('../core/core.element');
+var helpers = require('../helpers/index');
+var layouts = require('../core/core.layouts');
+
+var noop = helpers.noop;
+
+defaults._set('global', {
+	title: {
+		display: false,
+		fontStyle: 'bold',
+		fullWidth: true,
+		lineHeight: 1.2,
+		padding: 10,
+		position: 'top',
+		text: '',
+		weight: 2000         // by default greater than legend (1000) to be above
+	}
 });
 
-export class Title extends Element {
-	constructor(config) {
-		super();
+/**
+ * IMPORTANT: this class is exposed publicly as Chart.Legend, backward compatibility required!
+ */
+var Title = Element.extend({
+	initialize: function(config) {
+		var me = this;
+		helpers.extend(me, config);
 
-		Object.assign(this, config);
-
-		this.chart = config.chart;
-		this.options = config.options;
-		this.ctx = config.ctx;
-		this._margins = undefined;
-		this._padding = undefined;
-		this.legendHitBoxes = []; // Contains hit boxes for each dataset (in dataset order)
-		this.top = undefined;
-		this.bottom = undefined;
-		this.left = undefined;
-		this.right = undefined;
-		this.width = undefined;
-		this.height = undefined;
-		this.maxWidth = undefined;
-		this.maxHeight = undefined;
-		this.position = undefined;
-		this.weight = undefined;
-		this.fullWidth = undefined;
-	}
+		// Contains hit boxes for each dataset (in dataset order)
+		me.legendHitBoxes = [];
+	},
 
 	// These methods are ordered by lifecycle. Utilities then follow.
 
-
-	beforeUpdate() {}
-
-	update(maxWidth, maxHeight, margins) {
-		const me = this;
+	beforeUpdate: noop,
+	update: function(maxWidth, maxHeight, margins) {
+		var me = this;
 
 		// Update Lifecycle - Probably don't want to ever extend or overwrite this function ;)
 		me.beforeUpdate();
@@ -53,7 +44,7 @@ export class Title extends Element {
 		// Absorb the master measurements
 		me.maxWidth = maxWidth;
 		me.maxHeight = maxHeight;
-		me._margins = margins;
+		me.margins = margins;
 
 		// Dimensions
 		me.beforeSetDimensions();
@@ -71,15 +62,16 @@ export class Title extends Element {
 		//
 		me.afterUpdate();
 
-	}
+		return me.minSize;
 
-	afterUpdate() {}
+	},
+	afterUpdate: noop,
 
+	//
 
-	beforeSetDimensions() {}
-
-	setDimensions() {
-		const me = this;
+	beforeSetDimensions: noop,
+	setDimensions: function() {
+		var me = this;
 		// Set the unconstrained dimension before label rotation
 		if (me.isHorizontal()) {
 			// Reset position before calculating rotation
@@ -93,135 +85,125 @@ export class Title extends Element {
 			me.top = 0;
 			me.bottom = me.height;
 		}
-	}
 
-	afterSetDimensions() {}
+		// Reset padding
+		me.paddingLeft = 0;
+		me.paddingTop = 0;
+		me.paddingRight = 0;
+		me.paddingBottom = 0;
 
-	beforeBuildLabels() {}
+		// Reset minSize
+		me.minSize = {
+			width: 0,
+			height: 0
+		};
+	},
+	afterSetDimensions: noop,
 
-	buildLabels() {}
+	//
 
-	afterBuildLabels() {}
+	beforeBuildLabels: noop,
+	buildLabels: noop,
+	afterBuildLabels: noop,
 
-	beforeFit() {}
+	//
 
-	fit() {
-		const me = this;
-		const opts = me.options;
-		const minSize = {};
-		const isHorizontal = me.isHorizontal();
+	beforeFit: noop,
+	fit: function() {
+		var me = this;
+		var valueOrDefault = helpers.valueOrDefault;
+		var opts = me.options;
+		var display = opts.display;
+		var fontSize = valueOrDefault(opts.fontSize, defaults.global.defaultFontSize);
+		var minSize = me.minSize;
+		var lineCount = helpers.isArray(opts.text) ? opts.text.length : 1;
+		var lineHeight = helpers.options.toLineHeight(opts.lineHeight, fontSize);
+		var textSize = display ? (lineCount * lineHeight) + (opts.padding * 2) : 0;
 
-		if (!opts.display) {
-			me.width = minSize.width = me.height = minSize.height = 0;
-			return;
+		if (me.isHorizontal()) {
+			minSize.width = me.maxWidth; // fill all the width
+			minSize.height = textSize;
+		} else {
+			minSize.width = textSize;
+			minSize.height = me.maxHeight; // fill all the height
 		}
 
-		const lineCount = helpers.isArray(opts.text) ? opts.text.length : 1;
-		me._padding = helpers.options.toPadding(opts.padding);
-		const textSize = lineCount * helpers.options._parseFont(opts).lineHeight + me._padding.height;
-		me.width = minSize.width = isHorizontal ? me.maxWidth : textSize;
-		me.height = minSize.height = isHorizontal ? textSize : me.maxHeight;
-	}
+		me.width = minSize.width;
+		me.height = minSize.height;
 
-	afterFit() {}
+	},
+	afterFit: noop,
 
 	// Shared Methods
-	isHorizontal() {
-		const pos = this.options.position;
+	isHorizontal: function() {
+		var pos = this.options.position;
 		return pos === 'top' || pos === 'bottom';
-	}
+	},
 
 	// Actually draw the title block on the canvas
-	draw() {
-		const me = this;
-		const ctx = me.ctx;
-		const opts = me.options;
+	draw: function() {
+		var me = this;
+		var ctx = me.ctx;
+		var valueOrDefault = helpers.valueOrDefault;
+		var opts = me.options;
+		var globalDefaults = defaults.global;
 
-		if (!opts.display) {
-			return;
-		}
+		if (opts.display) {
+			var fontSize = valueOrDefault(opts.fontSize, globalDefaults.defaultFontSize);
+			var fontStyle = valueOrDefault(opts.fontStyle, globalDefaults.defaultFontStyle);
+			var fontFamily = valueOrDefault(opts.fontFamily, globalDefaults.defaultFontFamily);
+			var titleFont = helpers.fontString(fontSize, fontStyle, fontFamily);
+			var lineHeight = helpers.options.toLineHeight(opts.lineHeight, fontSize);
+			var offset = lineHeight / 2 + opts.padding;
+			var rotation = 0;
+			var top = me.top;
+			var left = me.left;
+			var bottom = me.bottom;
+			var right = me.right;
+			var maxWidth, titleX, titleY;
 
-		const fontOpts = helpers.options._parseFont(opts);
-		const lineHeight = fontOpts.lineHeight;
-		const offset = lineHeight / 2 + me._padding.top;
-		let rotation = 0;
-		const top = me.top;
-		const left = me.left;
-		const bottom = me.bottom;
-		const right = me.right;
-		let maxWidth, titleX, titleY;
-		let align;
+			ctx.fillStyle = valueOrDefault(opts.fontColor, globalDefaults.defaultFontColor); // render in correct colour
+			ctx.font = titleFont;
 
-		// Horizontal
-		if (me.isHorizontal()) {
-			switch (opts.align) {
-			case 'start':
-				titleX = left;
-				align = 'left';
-				break;
-			case 'end':
-				titleX = right;
-				align = 'right';
-				break;
-			default:
-				titleX = left + ((right - left) / 2);
-				align = 'center';
-				break;
-			}
-
-			titleY = top + offset;
-			maxWidth = right - left;
-		} else {
-			titleX = opts.position === 'left' ? left + offset : right - offset;
-
-			switch (opts.align) {
-			case 'start':
-				titleY = opts.position === 'left' ? bottom : top;
-				align = 'left';
-				break;
-			case 'end':
-				titleY = opts.position === 'left' ? top : bottom;
-				align = 'right';
-				break;
-			default:
+			// Horizontal
+			if (me.isHorizontal()) {
+				titleX = left + ((right - left) / 2); // midpoint of the width
+				titleY = top + offset;
+				maxWidth = right - left;
+			} else {
+				titleX = opts.position === 'left' ? left + offset : right - offset;
 				titleY = top + ((bottom - top) / 2);
-				align = 'center';
-				break;
+				maxWidth = bottom - top;
+				rotation = Math.PI * (opts.position === 'left' ? -0.5 : 0.5);
 			}
-			maxWidth = bottom - top;
-			rotation = Math.PI * (opts.position === 'left' ? -0.5 : 0.5);
-		}
 
-		ctx.save();
+			ctx.save();
+			ctx.translate(titleX, titleY);
+			ctx.rotate(rotation);
+			ctx.textAlign = 'center';
+			ctx.textBaseline = 'middle';
 
-		ctx.fillStyle = helpers.valueOrDefault(opts.fontColor, defaults.fontColor); // render in correct colour
-		ctx.font = fontOpts.string;
-
-		ctx.translate(titleX, titleY);
-		ctx.rotate(rotation);
-		ctx.textAlign = align;
-		ctx.textBaseline = 'middle';
-
-		const text = opts.text;
-		if (helpers.isArray(text)) {
-			let y = 0;
-			for (let i = 0; i < text.length; ++i) {
-				ctx.fillText(text[i], 0, y, maxWidth);
-				y += lineHeight;
+			var text = opts.text;
+			if (helpers.isArray(text)) {
+				var y = 0;
+				for (var i = 0; i < text.length; ++i) {
+					ctx.fillText(text[i], 0, y, maxWidth);
+					y += lineHeight;
+				}
+			} else {
+				ctx.fillText(text, 0, 0, maxWidth);
 			}
-		} else {
-			ctx.fillText(text, 0, 0, maxWidth);
-		}
 
-		ctx.restore();
+			ctx.restore();
+		}
 	}
-}
+});
 
 function createNewTitleBlockAndAttach(chart, titleOpts) {
-	const title = new Title({
+	var title = new Title({
 		ctx: chart.ctx,
 		options: titleOpts,
-		chart
+		chart: chart
 	});
 
 	layouts.configure(chart, title, titleOpts);
@@ -229,7 +211,7 @@ function createNewTitleBlockAndAttach(chart, titleOpts) {
 	chart.titleBlock = title;
 }
 
-export default {
+module.exports = {
 	id: 'title',
 
 	/**
@@ -241,20 +223,20 @@ export default {
 	 */
 	_element: Title,
 
-	beforeInit(chart) {
-		const titleOpts = chart.options.title;
+	beforeInit: function(chart) {
+		var titleOpts = chart.options.title;
 
 		if (titleOpts) {
 			createNewTitleBlockAndAttach(chart, titleOpts);
 		}
 	},
 
-	beforeUpdate(chart) {
-		const titleOpts = chart.options.title;
-		const titleBlock = chart.titleBlock;
+	beforeUpdate: function(chart) {
+		var titleOpts = chart.options.title;
+		var titleBlock = chart.titleBlock;
 
 		if (titleOpts) {
-			helpers.mergeIf(titleOpts, defaults.title);
+			helpers.mergeIf(titleOpts, defaults.global.title);
 
 			if (titleBlock) {
 				layouts.configure(chart, titleBlock, titleOpts);

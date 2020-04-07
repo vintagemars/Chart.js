@@ -1,94 +1,98 @@
+'use strict';
+
+var helpers = require('./helpers.core');
+
 /**
  * Easing functions adapted from Robert Penner's easing equations.
- * @namespace Chart.helpers.easing.effects
+ * @namespace Chart.helpers.easingEffects
  * @see http://www.robertpenner.com/easing/
  */
-const effects = {
-	linear(t) {
+var effects = {
+	linear: function(t) {
 		return t;
 	},
 
-	easeInQuad(t) {
+	easeInQuad: function(t) {
 		return t * t;
 	},
 
-	easeOutQuad(t) {
+	easeOutQuad: function(t) {
 		return -t * (t - 2);
 	},
 
-	easeInOutQuad(t) {
+	easeInOutQuad: function(t) {
 		if ((t /= 0.5) < 1) {
 			return 0.5 * t * t;
 		}
 		return -0.5 * ((--t) * (t - 2) - 1);
 	},
 
-	easeInCubic(t) {
+	easeInCubic: function(t) {
 		return t * t * t;
 	},
 
-	easeOutCubic(t) {
-		return (t -= 1) * t * t + 1;
+	easeOutCubic: function(t) {
+		return (t = t - 1) * t * t + 1;
 	},
 
-	easeInOutCubic(t) {
+	easeInOutCubic: function(t) {
 		if ((t /= 0.5) < 1) {
 			return 0.5 * t * t * t;
 		}
 		return 0.5 * ((t -= 2) * t * t + 2);
 	},
 
-	easeInQuart(t) {
+	easeInQuart: function(t) {
 		return t * t * t * t;
 	},
 
-	easeOutQuart(t) {
-		return -((t -= 1) * t * t * t - 1);
+	easeOutQuart: function(t) {
+		return -((t = t - 1) * t * t * t - 1);
 	},
 
-	easeInOutQuart(t) {
+	easeInOutQuart: function(t) {
 		if ((t /= 0.5) < 1) {
 			return 0.5 * t * t * t * t;
 		}
 		return -0.5 * ((t -= 2) * t * t * t - 2);
 	},
 
-	easeInQuint(t) {
+	easeInQuint: function(t) {
 		return t * t * t * t * t;
 	},
 
-	easeOutQuint(t) {
-		return (t -= 1) * t * t * t * t + 1;
+	easeOutQuint: function(t) {
+		return (t = t - 1) * t * t * t * t + 1;
 	},
 
-	easeInOutQuint(t) {
+	easeInOutQuint: function(t) {
 		if ((t /= 0.5) < 1) {
 			return 0.5 * t * t * t * t * t;
 		}
 		return 0.5 * ((t -= 2) * t * t * t * t + 2);
 	},
 
-	easeInSine(t) {
+	easeInSine: function(t) {
 		return -Math.cos(t * (Math.PI / 2)) + 1;
 	},
 
-	easeOutSine(t) {
+	easeOutSine: function(t) {
 		return Math.sin(t * (Math.PI / 2));
 	},
 
-	easeInOutSine(t) {
+	easeInOutSine: function(t) {
 		return -0.5 * (Math.cos(Math.PI * t) - 1);
 	},
 
-	easeInExpo(t) {
+	easeInExpo: function(t) {
 		return (t === 0) ? 0 : Math.pow(2, 10 * (t - 1));
 	},
 
-	easeOutExpo(t) {
+	easeOutExpo: function(t) {
 		return (t === 1) ? 1 : -Math.pow(2, -10 * t) + 1;
 	},
 
-	easeInOutExpo(t) {
+	easeInOutExpo: function(t) {
 		if (t === 0) {
 			return 0;
 		}
@@ -101,28 +105,28 @@ const effects = {
 		return 0.5 * (-Math.pow(2, -10 * --t) + 2);
 	},
 
-	easeInCirc(t) {
+	easeInCirc: function(t) {
 		if (t >= 1) {
 			return t;
 		}
 		return -(Math.sqrt(1 - t * t) - 1);
 	},
 
-	easeOutCirc(t) {
-		return Math.sqrt(1 - (t -= 1) * t);
+	easeOutCirc: function(t) {
+		return Math.sqrt(1 - (t = t - 1) * t);
 	},
 
-	easeInOutCirc(t) {
+	easeInOutCirc: function(t) {
 		if ((t /= 0.5) < 1) {
 			return -0.5 * (Math.sqrt(1 - t * t) - 1);
 		}
 		return 0.5 * (Math.sqrt(1 - (t -= 2) * t) + 1);
 	},
 
-	easeInElastic(t) {
-		let s = 1.70158;
-		let p = 0;
-		let a = 1;
+	easeInElastic: function(t) {
+		var s = 1.70158;
+		var p = 0;
+		var a = 1;
 		if (t === 0) {
 			return 0;
 		}
@@ -141,10 +145,10 @@ const effects = {
 		return -(a * Math.pow(2, 10 * (t -= 1)) * Math.sin((t - s) * (2 * Math.PI) / p));
 	},
 
-	easeOutElastic(t) {
-		let s = 1.70158;
-		let p = 0;
-		let a = 1;
+	easeOutElastic: function(t) {
+		var s = 1.70158;
+		var p = 0;
+		var a = 1;
 		if (t === 0) {
 			return 0;
 		}
@@ -163,10 +167,10 @@ const effects = {
 		return a * Math.pow(2, -10 * t) * Math.sin((t - s) * (2 * Math.PI) / p) + 1;
 	},
 
-	easeInOutElastic(t) {
-		let s = 1.70158;
-		let p = 0;
-		let a = 1;
+	easeInOutElastic: function(t) {
+		var s = 1.70158;
+		var p = 0;
+		var a = 1;
 		if (t === 0) {
 			return 0;
 		}
@@ -187,29 +191,29 @@ const effects = {
 		}
 		return a * Math.pow(2, -10 * (t -= 1)) * Math.sin((t - s) * (2 * Math.PI) / p) * 0.5 + 1;
 	},
-	easeInBack(t) {
-		const s = 1.70158;
+	easeInBack: function(t) {
+		var s = 1.70158;
 		return t * t * ((s + 1) * t - s);
 	},
 
-	easeOutBack(t) {
-		const s = 1.70158;
-		return (t -= 1) * t * ((s + 1) * t + s) + 1;
+	easeOutBack: function(t) {
+		var s = 1.70158;
+		return (t = t - 1) * t * ((s + 1) * t + s) + 1;
 	},
 
-	easeInOutBack(t) {
-		let s = 1.70158;
+	easeInOutBack: function(t) {
+		var s = 1.70158;
 		if ((t /= 0.5) < 1) {
 			return 0.5 * (t * t * (((s *= (1.525)) + 1) * t - s));
 		}
 		return 0.5 * ((t -= 2) * t * (((s *= (1.525)) + 1) * t + s) + 2);
 	},
 
-	easeInBounce(t) {
+	easeInBounce: function(t) {
 		return 1 - effects.easeOutBounce(1 - t);
 	},
 
-	easeOutBounce(t) {
+	easeOutBounce: function(t) {
 		if (t < (1 / 2.75)) {
 			return 7.5625 * t * t;
 		}
@@ -222,7 +226,7 @@ const effects = {
 		return 7.5625 * (t -= (2.625 / 2.75)) * t + 0.984375;
 	},
 
-	easeInOutBounce(t) {
+	easeInOutBounce: function(t) {
 		if (t < 0.5) {
 			return effects.easeInBounce(t * 2) * 0.5;
 		}
@@ -230,4 +234,17 @@ const effects = {
 	}
 };
 
-export default effects;
+module.exports = {
+	effects: effects
+};
+
+// DEPRECATIONS
+
+/**
+ * Provided for backward compatibility, use Chart.helpers.easing.effects instead.
+ * @function Chart.helpers.easingEffects
+ * @deprecated since version 2.7.0
+ * @todo remove at version 3
+ * @private
+ */
+helpers.easingEffects = effects;

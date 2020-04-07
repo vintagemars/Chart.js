@@ -3,7 +3,7 @@
 
 <head>
 	<title>Bar Chart Multi Axis</title>
-	<script src="../../../dist/Chart.min.js"></script>
+	<script src="../../../dist/Chart.bundle.js"></script>
 	<script src="../../utils.js"></script>
 	<style>
 	canvas {
@@ -33,7 +33,7 @@
 					window.chartColors.purple,
 					window.chartColors.red
 				],
-				yAxisID: 'y',
+				yAxisID: 'y-axis-1',
 				data: [
 					randomScalingFactor(),
 					randomScalingFactor(),
@@ -46,7 +46,7 @@
 			}, {
 				label: 'Dataset 2',
 				backgroundColor: window.chartColors.grey,
-				yAxisID: 'y1',
+				yAxisID: 'y-axis-2',
 				data: [
 					randomScalingFactor(),
 					randomScalingFactor(),
@@ -75,19 +75,20 @@
 						intersect: true
 					},
 					scales: {
-						y: {
-							type: 'linear',
+						yAxes: [{
+							type: 'linear', // only linear but allow scale type registration. This allows extensions to exist solely for log scale for instance
 							display: true,
 							position: 'left',
-						},
-						y1: {
-							type: 'linear',
+							id: 'y-axis-1',
+						}, {
+							type: 'linear', // only linear but allow scale type registration. This allows extensions to exist solely for log scale for instance
 							display: true,
 							position: 'right',
+							id: 'y-axis-2',
 							gridLines: {
 								drawOnChartArea: false
 							}
-						},
+						}],
 					}
 				}
 			});

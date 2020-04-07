@@ -1,11 +1,6 @@
-import filler from './plugin.filler';
-import legend from './plugin.legend';
-import title from './plugin.title';
-import tooltip from './plugin.tooltip';
+'use strict';
 
-export default {
-	filler,
-	legend,
-	title,
-	tooltip
-};
+module.exports = {};
+module.exports.filler = require('./plugin.filler');
+module.exports.legend = require('./plugin.legend');
+module.exports.title = require('./plugin.title');

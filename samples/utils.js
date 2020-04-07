@@ -11,7 +11,7 @@ window.chartColors = {
 };
 
 (function(global) {
-	var MONTHS = [
+	var Months = [
 		'January',
 		'February',
 		'March',
@@ -39,7 +39,7 @@ window.chartColors = {
 	];
 
 	var Samples = global.Samples || (global.Samples = {});
-	var Color = Chart.helpers.color;
+	var Color = global.Color;
 
 	Samples.utils = {
 		// Adapted from http://indiegamr.com/generate-repeatable-random-numbers-in-js/
@@ -106,7 +106,7 @@ window.chartColors = {
 			var i, value;
 
 			for (i = 0; i < count; ++i) {
-				value = MONTHS[Math.ceil(i) % 12];
+				value = Months[Math.ceil(i) % 12];
 				values.push(value.substring(0, section));
 			}
 

@@ -3,7 +3,7 @@
 
 <head>
 	<title>Tooltip Hooks</title>
-	<script src="../../dist/Chart.min.js"></script>
+	<script src="../../dist/Chart.bundle.js"></script>
 	<script src="../utils.js"></script>
 	<style>
 	canvas {
@@ -79,20 +79,20 @@
 					intersect: true
 				},
 				scales: {
-					x: {
+					xAxes: [{
 						display: true,
 						scaleLabel: {
 							show: true,
 							labelString: 'Month'
 						}
-					},
-					y: {
+					}],
+					yAxes: [{
 						display: true,
 						scaleLabel: {
 							show: true,
 							labelString: 'Value'
 						}
-					}
+					}]
 				}
 			}
 		};

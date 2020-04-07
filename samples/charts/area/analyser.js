@@ -1,3 +1,5 @@
+/* global Chart */
+
 'use strict';
 
 (function() {

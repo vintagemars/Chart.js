@@ -3,8 +3,8 @@
 
 <head>
 	<title>Line Chart - Combo Time Scale</title>
-	<script src="../../../dist/Chart.min.js"></script>
-	<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@1.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.13.0/moment.min.js"></script>
+	<script src="../../../dist/Chart.js"></script>
 	<script src="../../utils.js"></script>
 	<style>
 		canvas {
@@ -27,48 +27,68 @@
 	<button id="addData">Add Data</button>
 	<button id="removeData">Remove Data</button>
 	<script>
-		function newDate(days) {
-			var date = new Date();
-			date.setHours(0, 0, 0, 0);
-			date.setDate(date.getDate() + days);
-			return date.valueOf();
-		}
+		var timeFormat = 'MM/DD/YYYY HH:mm';
 
-		var labels = [];
-		var data1 = [];
-		var data2 = [];
-		var data3 = [];
-		for (var i = 0; i < 7; i++) {
-			labels.push(newDate(i));
-			data1.push(randomScalingFactor());
-			data2.push(randomScalingFactor());
-			data3.push(randomScalingFactor());
+		function newDateString(days) {
+			return moment().add(days, 'd').format(timeFormat);
 		}
 
 		var color = Chart.helpers.color;
 		var config = {
 			type: 'bar',
 			data: {
-				labels: labels,
+				labels: [
+					newDateString(0),
+					newDateString(1),
+					newDateString(2),
+					newDateString(3),
+					newDateString(4),
+					newDateString(5),
+					newDateString(6)
+				],
 				datasets: [{
 					type: 'bar',
 					label: 'Dataset 1',
 					backgroundColor: color(window.chartColors.red).alpha(0.5).rgbString(),
 					borderColor: window.chartColors.red,
-					data: data1,
+					data: [
+						randomScalingFactor(),
+						randomScalingFactor(),
+						randomScalingFactor(),
+						randomScalingFactor(),
+						randomScalingFactor(),
+						randomScalingFactor(),
+						randomScalingFactor()
+					],
 				}, {
 					type: 'bar',
 					label: 'Dataset 2',
 					backgroundColor: color(window.chartColors.blue).alpha(0.5).rgbString(),
 					borderColor: window.chartColors.blue,
-					data: data2,
+					data: [
+						randomScalingFactor(),
+						randomScalingFactor(),
+						randomScalingFactor(),
+						randomScalingFactor(),
+						randomScalingFactor(),
+						randomScalingFactor(),
+						randomScalingFactor()
+					],
 				}, {
 					type: 'line',
 					label: 'Dataset 3',
 					backgroundColor: color(window.chartColors.green).alpha(0.5).rgbString(),
 					borderColor: window.chartColors.green,
 					fill: false,
-					data: data3,
+					data: [
+						randomScalingFactor(),
+						randomScalingFactor(),
+						randomScalingFactor(),
+						randomScalingFactor(),
+						randomScalingFactor(),
+						randomScalingFactor(),
+						randomScalingFactor()
+					],
 				}]
 			},
 			options: {
@@ -76,14 +96,14 @@
 					text: 'Chart.js Combo Time Scale'
 				},
 				scales: {
-					x: {
+					xAxes: [{
 						type: 'time',
 						display: true,
-						offset: true,
 						time: {
-							unit: 'day'
+							format: timeFormat,
+							// round: 'day'
 						}
-					},
+					}],
 				},
 			}
 		};
@@ -125,7 +145,7 @@
 
 		document.getElementById('addData').addEventListener('click', function() {
 			if (config.data.datasets.length > 0) {
-				config.data.labels.push(newDate(config.data.labels.length));
+				config.data.labels.push(newDateString(config.data.labels.length));
 
 				for (var index = 0; index < config.data.datasets.length; ++index) {
 					config.data.datasets[index].data.push(randomScalingFactor());

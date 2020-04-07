@@ -18,28 +18,22 @@
             "responsive": false,
             "legend": false,
             "title": false,
-            "bar": {
-                "datasets": {
-                    "barPercentage": 1,
-                    "categoryPercentage": 1
-                }
-            },
             "scales": {
-                "x": {
+                "xAxes": [{
                     "type": "time",
                     "display": false,
-                    "offset": false,
-                    "time": {
-                        "parser": "YYYY-MM"
-                    },
+                    "barPercentage": 1,
+                    "categoryPercentage": 1,
                     "ticks": {
                         "source": "labels"
                     }
-                },
-                "y": {
+                }],
+                "yAxes": [{
                     "display": false,
-                    "beginAtZero": true
-                }
+                    "ticks": {
+                        "beginAtZero": true
+                    }
+                }]
             }
         }
     },

@@ -1,189 +1,217 @@
-import defaults from '../core/core.defaults';
-import Element from '../core/core.element';
-import {isObject} from '../helpers/helpers.core';
+'use strict';
 
-const defaultColor = defaults.color;
+var defaults = require('../core/core.defaults');
+var Element = require('../core/core.element');
 
-defaults.set('elements', {
-	rectangle: {
-		backgroundColor: defaultColor,
-		borderColor: defaultColor,
-		borderSkipped: 'bottom',
-		borderWidth: 0
+defaults._set('global', {
+	elements: {
+		rectangle: {
+			backgroundColor: defaults.global.defaultColor,
+			borderColor: defaults.global.defaultColor,
+			borderSkipped: 'bottom',
+			borderWidth: 0
+		}
 	}
 });
 
+function isVertical(bar) {
+	return bar._view.width !== undefined;
+}
+
 /**
  * Helper function to get the bounds of the bar regardless of the orientation
- * @param {Rectangle} bar the bar
- * @param {boolean} [useFinalPosition]
- * @return {object} bounds of the bar
+ * @param bar {Chart.Element.Rectangle} the bar
+ * @return {Bounds} bounds of the bar
  * @private
  */
-function getBarBounds(bar, useFinalPosition) {
-	const {x, y, base, width, height} = bar.getProps(['x', 'y', 'base', 'width', 'height'], useFinalPosition);
+function getBarBounds(bar) {
+	var vm = bar._view;
+	var x1, x2, y1, y2;
 
-	let left, right, top, bottom, half;
-
-	if (bar.horizontal) {
-		half = height / 2;
-		left = Math.min(x, base);
-		right = Math.max(x, base);
-		top = y - half;
-		bottom = y + half;
+	if (isVertical(bar)) {
+		// vertical
+		var halfWidth = vm.width / 2;
+		x1 = vm.x - halfWidth;
+		x2 = vm.x + halfWidth;
+		y1 = Math.min(vm.y, vm.base);
+		y2 = Math.max(vm.y, vm.base);
 	} else {
-		half = width / 2;
-		left = x - half;
-		right = x + half;
-		top = Math.min(y, base);
-		bottom = Math.max(y, base);
-	}
-
-	return {left, top, right, bottom};
-}
-
-function swap(orig, v1, v2) {
-	return orig === v1 ? v2 : orig === v2 ? v1 : orig;
-}
-
-function parseBorderSkipped(bar) {
-	let edge = bar.options.borderSkipped;
-	const res = {};
-
-	if (!edge) {
-		return res;
-	}
-
-	if (bar.horizontal) {
-		if (bar.base > bar.x) {
-			edge = swap(edge, 'left', 'right');
-		}
-	} else if (bar.base < bar.y) {
-		edge = swap(edge, 'bottom', 'top');
-	}
-
-	res[edge] = true;
-	return res;
-}
-
-function skipOrLimit(skip, value, min, max) {
-	return skip ? 0 : Math.max(Math.min(value, max), min);
-}
-
-function parseBorderWidth(bar, maxW, maxH) {
-	const value = bar.options.borderWidth;
-	const skip = parseBorderSkipped(bar);
-	let t, r, b, l;
-
-	if (isObject(value)) {
-		t = +value.top || 0;
-		r = +value.right || 0;
-		b = +value.bottom || 0;
-		l = +value.left || 0;
-	} else {
-		t = r = b = l = +value || 0;
+		// horizontal bar
+		var halfHeight = vm.height / 2;
+		x1 = Math.min(vm.x, vm.base);
+		x2 = Math.max(vm.x, vm.base);
+		y1 = vm.y - halfHeight;
+		y2 = vm.y + halfHeight;
 	}
 
 	return {
-		t: skipOrLimit(skip.top, t, 0, maxH),
-		r: skipOrLimit(skip.right, r, 0, maxW),
-		b: skipOrLimit(skip.bottom, b, 0, maxH),
-		l: skipOrLimit(skip.left, l, 0, maxW)
+		left: x1,
+		top: y1,
+		right: x2,
+		bottom: y2
 	};
 }
 
-function boundingRects(bar) {
-	const bounds = getBarBounds(bar);
-	const width = bounds.right - bounds.left;
-	const height = bounds.bottom - bounds.top;
-	const border = parseBorderWidth(bar, width / 2, height / 2);
+module.exports = Element.extend({
+	draw: function() {
+		var ctx = this._chart.ctx;
+		var vm = this._view;
+		var left, right, top, bottom, signX, signY, borderSkipped;
+		var borderWidth = vm.borderWidth;
 
-	return {
-		outer: {
-			x: bounds.left,
-			y: bounds.top,
-			w: width,
-			h: height
-		},
-		inner: {
-			x: bounds.left + border.l,
-			y: bounds.top + border.t,
-			w: width - border.l - border.r,
-			h: height - border.t - border.b
-		}
-	};
-}
-
-function inRange(bar, x, y, useFinalPosition) {
-	const skipX = x === null;
-	const skipY = y === null;
-	const bounds = !bar || (skipX && skipY) ? false : getBarBounds(bar, useFinalPosition);
-
-	return bounds
-		&& (skipX || x >= bounds.left && x <= bounds.right)
-		&& (skipY || y >= bounds.top && y <= bounds.bottom);
-}
-
-export default class Rectangle extends Element {
-
-	static _type = 'rectangle';
-
-	constructor(cfg) {
-		super();
-
-		this.options = undefined;
-		this.horizontal = undefined;
-		this.base = undefined;
-		this.width = undefined;
-		this.height = undefined;
-
-		if (cfg) {
-			Object.assign(this, cfg);
-		}
-	}
-
-	draw(ctx) {
-		const options = this.options;
-		const {inner, outer} = boundingRects(this);
-
-		ctx.save();
-
-		if (outer.w !== inner.w || outer.h !== inner.h) {
-			ctx.beginPath();
-			ctx.rect(outer.x, outer.y, outer.w, outer.h);
-			ctx.clip();
-			ctx.rect(inner.x, inner.y, inner.w, inner.h);
-			ctx.fillStyle = options.borderColor;
-			ctx.fill('evenodd');
+		if (!vm.horizontal) {
+			// bar
+			left = vm.x - vm.width / 2;
+			right = vm.x + vm.width / 2;
+			top = vm.y;
+			bottom = vm.base;
+			signX = 1;
+			signY = bottom > top ? 1 : -1;
+			borderSkipped = vm.borderSkipped || 'bottom';
+		} else {
+			// horizontal bar
+			left = vm.base;
+			right = vm.x;
+			top = vm.y - vm.height / 2;
+			bottom = vm.y + vm.height / 2;
+			signX = right > left ? 1 : -1;
+			signY = 1;
+			borderSkipped = vm.borderSkipped || 'left';
 		}
 
-		ctx.fillStyle = options.backgroundColor;
-		ctx.fillRect(inner.x, inner.y, inner.w, inner.h);
+		// Canvas doesn't allow us to stroke inside the width so we can
+		// adjust the sizes to fit if we're setting a stroke on the line
+		if (borderWidth) {
+			// borderWidth shold be less than bar width and bar height.
+			var barSize = Math.min(Math.abs(left - right), Math.abs(top - bottom));
+			borderWidth = borderWidth > barSize ? barSize : borderWidth;
+			var halfStroke = borderWidth / 2;
+			// Adjust borderWidth when bar top position is near vm.base(zero).
+			var borderLeft = left + (borderSkipped !== 'left' ? halfStroke * signX : 0);
+			var borderRight = right + (borderSkipped !== 'right' ? -halfStroke * signX : 0);
+			var borderTop = top + (borderSkipped !== 'top' ? halfStroke * signY : 0);
+			var borderBottom = bottom + (borderSkipped !== 'bottom' ? -halfStroke * signY : 0);
+			// not become a vertical line?
+			if (borderLeft !== borderRight) {
+				top = borderTop;
+				bottom = borderBottom;
+			}
+			// not become a horizontal line?
+			if (borderTop !== borderBottom) {
+				left = borderLeft;
+				right = borderRight;
+			}
+		}
 
-		ctx.restore();
-	}
+		ctx.beginPath();
+		ctx.fillStyle = vm.backgroundColor;
+		ctx.strokeStyle = vm.borderColor;
+		ctx.lineWidth = borderWidth;
 
-	inRange(mouseX, mouseY, useFinalPosition) {
-		return inRange(this, mouseX, mouseY, useFinalPosition);
-	}
+		// Corner points, from bottom-left to bottom-right clockwise
+		// | 1 2 |
+		// | 0 3 |
+		var corners = [
+			[left, bottom],
+			[left, top],
+			[right, top],
+			[right, bottom]
+		];
 
-	inXRange(mouseX, useFinalPosition) {
-		return inRange(this, mouseX, null, useFinalPosition);
-	}
+		// Find first (starting) corner with fallback to 'bottom'
+		var borders = ['bottom', 'left', 'top', 'right'];
+		var startCorner = borders.indexOf(borderSkipped, 0);
+		if (startCorner === -1) {
+			startCorner = 0;
+		}
 
-	inYRange(mouseY, useFinalPosition) {
-		return inRange(this, null, mouseY, useFinalPosition);
-	}
+		function cornerAt(index) {
+			return corners[(startCorner + index) % 4];
+		}
 
-	getCenterPoint(useFinalPosition) {
-		const {x, y, base, horizontal} = this.getProps(['x', 'y', 'base', 'horizontal', useFinalPosition]);
+		// Draw rectangle from 'startCorner'
+		var corner = cornerAt(0);
+		ctx.moveTo(corner[0], corner[1]);
+
+		for (var i = 1; i < 4; i++) {
+			corner = cornerAt(i);
+			ctx.lineTo(corner[0], corner[1]);
+		}
+
+		ctx.fill();
+		if (borderWidth) {
+			ctx.stroke();
+		}
+	},
+
+	height: function() {
+		var vm = this._view;
+		return vm.base - vm.y;
+	},
+
+	inRange: function(mouseX, mouseY) {
+		var inRange = false;
+
+		if (this._view) {
+			var bounds = getBarBounds(this);
+			inRange = mouseX >= bounds.left && mouseX <= bounds.right && mouseY >= bounds.top && mouseY <= bounds.bottom;
+		}
+
+		return inRange;
+	},
+
+	inLabelRange: function(mouseX, mouseY) {
+		var me = this;
+		if (!me._view) {
+			return false;
+		}
+
+		var inRange = false;
+		var bounds = getBarBounds(me);
+
+		if (isVertical(me)) {
+			inRange = mouseX >= bounds.left && mouseX <= bounds.right;
+		} else {
+			inRange = mouseY >= bounds.top && mouseY <= bounds.bottom;
+		}
+
+		return inRange;
+	},
+
+	inXRange: function(mouseX) {
+		var bounds = getBarBounds(this);
+		return mouseX >= bounds.left && mouseX <= bounds.right;
+	},
+
+	inYRange: function(mouseY) {
+		var bounds = getBarBounds(this);
+		return mouseY >= bounds.top && mouseY <= bounds.bottom;
+	},
+
+	getCenterPoint: function() {
+		var vm = this._view;
+		var x, y;
+		if (isVertical(this)) {
+			x = vm.x;
+			y = (vm.y + vm.base) / 2;
+		} else {
+			x = (vm.x + vm.base) / 2;
+			y = vm.y;
+		}
+
+		return {x: x, y: y};
+	},
+
+	getArea: function() {
+		var vm = this._view;
+		return vm.width * Math.abs(vm.y - vm.base);
+	},
+
+	tooltipPosition: function() {
+		var vm = this._view;
 		return {
-			x: horizontal ? (x + base) / 2 : x,
-			y: horizontal ? y : (y + base) / 2
+			x: vm.x,
+			y: vm.y
 		};
 	}
-
-	getRange(axis) {
-		return axis === 'x' ? this.width / 2 : this.height / 2;
-	}
-}
+});

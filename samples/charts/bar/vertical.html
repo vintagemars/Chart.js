@@ -3,7 +3,7 @@
 
 <head>
 	<title>Bar Chart</title>
-	<script src="../../../dist/Chart.min.js"></script>
+	<script src="../../../dist/Chart.bundle.js"></script>
 	<script src="../../utils.js"></script>
 	<style>
 	canvas {
@@ -116,6 +116,7 @@
 				barChartData.labels.push(month);
 
 				for (var index = 0; index < barChartData.datasets.length; ++index) {
+					// window.myBar.addData(randomScalingFactor(), index);
 					barChartData.datasets[index].data.push(randomScalingFactor());
 				}
 

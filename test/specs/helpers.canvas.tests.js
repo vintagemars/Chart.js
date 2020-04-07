@@ -1,8 +1,6 @@
 'use strict';
 
 describe('Chart.helpers.canvas', function() {
-	describe('auto', jasmine.fixture.specs('helpers.canvas'));
-
 	var helpers = Chart.helpers;
 
 	describe('clear', function() {
@@ -23,80 +21,32 @@ describe('Chart.helpers.canvas', function() {
 		});
 	});
 
-	describe('isPointInArea', function() {
-		it('should determine if a point is in the area', function() {
-			var isPointInArea = helpers.canvas._isPointInArea;
-			var area = {left: 0, top: 0, right: 512, bottom: 256};
+	describe('roundedRect', function() {
+		it('should create a rounded rectangle path', function() {
+			var context = window.createMockContext();
 
-			expect(isPointInArea({x: 0, y: 0}, area)).toBe(true);
-			expect(isPointInArea({x: -1e-12, y: -1e-12}, area)).toBe(true);
-			expect(isPointInArea({x: 512, y: 256}, area)).toBe(true);
-			expect(isPointInArea({x: 512 + 1e-12, y: 256 + 1e-12}, area)).toBe(true);
-			expect(isPointInArea({x: -0.5, y: 0}, area)).toBe(false);
-			expect(isPointInArea({x: 0, y: 256.5}, area)).toBe(false);
+			helpers.canvas.roundedRect(context, 10, 20, 30, 40, 5);
+
+			expect(context.getCalls()).toEqual([
+				{name: 'moveTo', args: [15, 20]},
+				{name: 'lineTo', args: [35, 20]},
+				{name: 'arcTo', args: [40, 20, 40, 25, 5]},
+				{name: 'lineTo', args: [40, 55]},
+				{name: 'arcTo', args: [40, 60, 35, 60, 5]},
+				{name: 'lineTo', args: [15, 60]},
+				{name: 'arcTo', args: [10, 60, 10, 55, 5]},
+				{name: 'lineTo', args: [10, 25]},
+				{name: 'arcTo', args: [10, 20, 15, 20, 5]},
+				{name: 'closePath', args: []},
+				{name: 'moveTo', args: [10, 20]}
+			]);
 		});
-	});
+		it('should optimize path if radius is 0', function() {
+			var context = window.createMockContext();
 
-	it('should return the width of the longest text in an Array and 2D Array', function() {
-		var context = window.createMockContext();
-		var font = "normal 12px 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif";
-		var arrayOfThings1D = ['FooBar', 'Bar'];
-		var arrayOfThings2D = [['FooBar_1', 'Bar_2'], 'Foo_1'];
+			helpers.canvas.roundedRect(context, 10, 20, 30, 40, 0);
 
-
-		// Regardless 'FooBar' is the longest label it should return (characters * 10)
-		expect(helpers.canvas._longestText(context, font, arrayOfThings1D, {})).toEqual(60);
-		expect(helpers.canvas._longestText(context, font, arrayOfThings2D, {})).toEqual(80);
-		// We check to make sure we made the right calls to the canvas.
-		expect(context.getCalls()).toEqual([{
-			name: 'save',
-			args: []
-		}, {
-			name: 'measureText',
-			args: ['FooBar']
-		}, {
-			name: 'measureText',
-			args: ['Bar']
-		}, {
-			name: 'restore',
-			args: []
-		}, {
-			name: 'save',
-			args: []
-		}, {
-			name: 'measureText',
-			args: ['FooBar_1']
-		}, {
-			name: 'measureText',
-			args: ['Bar_2']
-		}, {
-			name: 'measureText',
-			args: ['Foo_1']
-		}, {
-			name: 'restore',
-			args: []
-		}]);
-	});
-
-	it('compare text with current longest and update', function() {
-		var context = window.createMockContext();
-		var data = {};
-		var gc = [];
-		var longest = 70;
-
-		expect(helpers.canvas._measureText(context, data, gc, longest, 'foobar')).toEqual(70);
-		expect(helpers.canvas._measureText(context, data, gc, longest, 'foobar_')).toEqual(70);
-		expect(helpers.canvas._measureText(context, data, gc, longest, 'foobar_1')).toEqual(80);
-		// We check to make sure we made the right calls to the canvas.
-		expect(context.getCalls()).toEqual([{
-			name: 'measureText',
-			args: ['foobar']
-		}, {
-			name: 'measureText',
-			args: ['foobar_']
-		}, {
-			name: 'measureText',
-			args: ['foobar_1']
-		}]);
+			expect(context.getCalls()).toEqual([{name: 'rect', args: [10, 20, 30, 40]}]);
+		});
 	});
 });

@@ -40,19 +40,19 @@ function updateConfigByMutating(chart) {
 function updateConfigAsNewObject(chart) {
     chart.options = {
         responsive: true,
-        title: {
-            display: true,
+        title:{
+            display:true,
             text: 'Chart.js'
         },
         scales: {
-            x: {
+            xAxes: [{
                 display: true
-            },
-            y: {
+            }],
+            yAxes: [{
                 display: true
-            }
+            }]
         }
-    };
+    }
     chart.update();
 }
 ```
@@ -64,31 +64,32 @@ Variables referencing any one from `chart.scales` would be lost after updating s
 
 ```javascript
 function updateScales(chart) {
-    var xScale = chart.scales.x;
-    var yScale = chart.scales.y;
+    var xScale = chart.scales['x-axis-0'];
+    var yScale = chart.scales['y-axis-0'];
     chart.options.scales = {
-        newId: {
+        xAxes: [{
+            id: 'newId',
             display: true
-        },
-        y: {
+        }],
+        yAxes: [{
             display: true,
             type: 'logarithmic'
-        }
-    };
+        }]
+    }
     chart.update();
     // need to update the reference
-    xScale = chart.scales.newId;
-    yScale = chart.scales.y;
+    xScale = chart.scales['newId'];
+    yScale = chart.scales['y-axis-0'];
 }
 ```
 
-You can also update a specific scale either by its id.
+You can also update a specific scale either by specifying its index or id.
 
 ```javascript
 function updateScale(chart) {
-    chart.options.scales.y = {
+    chart.options.scales.yAxes[0] = {
         type: 'logarithmic'
-    };
+    }
     chart.update();
 }
 ```
@@ -97,4 +98,4 @@ Code sample for updating options can be found in [toggle-scale-type.html](../../
 
 ## Preventing Animations
 
-Sometimes when a chart updates, you may not want an animation. To achieve this you can call `update` with `'none'` as mode.
+Sometimes when a chart updates, you may not want an animation. To achieve this you can call `update` with a duration of `0`. This will render the chart synchronously and without an animation.

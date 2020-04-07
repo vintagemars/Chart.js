@@ -3,7 +3,7 @@
 
 <head>
 	<title>Bubble Chart</title>
-	<script src="../../dist/Chart.min.js"></script>
+	<script src="../../dist/Chart.bundle.js"></script>
 	<script src="../utils.js"></script>
 	<style type="text/css">
 		canvas{
@@ -29,6 +29,9 @@
 		var addedCount = 0;
 		var color = Chart.helpers.color;
 		var bubbleChartData = {
+			animation: {
+				duration: 10000
+			},
 			datasets: [{
 				label: 'My First dataset',
 				backgroundColor: color(window.chartColors.red).alpha(0.5).rgbString(),

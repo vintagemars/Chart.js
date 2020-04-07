@@ -3,7 +3,7 @@
 
 <head>
 	<title>Line Chart</title>
-	<script src="../../../dist/Chart.min.js"></script>
+	<script src="../../../dist/Chart.bundle.js"></script>
 	<script src="../../utils.js"></script>
 	<style>
 		canvas {
@@ -98,19 +98,19 @@
 					mode: 'index'
 				},
 				scales: {
-					x: {
+					xAxes: [{
 						scaleLabel: {
 							display: true,
 							labelString: 'Month'
 						}
-					},
-					y: {
+					}],
+					yAxes: [{
 						stacked: true,
 						scaleLabel: {
 							display: true,
 							labelString: 'Value'
 						}
-					}
+					}]
 				}
 			}
 		};

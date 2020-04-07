@@ -23,12 +23,12 @@
             "legend": false,
             "title": false,
             "scales": {
-                "x": {
+                "xAxes": [{
                     "display": false
-                },
-                "y": {
+                }],
+                "yAxes": [{
                     "display": false
-                }
+                }]
             },
             "elements": {
                 "point": {

@@ -3,9 +3,8 @@
 
 <head>
 	<title>Time Scale Point Data</title>
-	<script src="../../../dist/Chart.min.js"></script>
-	<script src="https://cdn.jsdelivr.net/npm/moment@2.24.0"></script>
-	<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@0.1.1"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.13.0/moment.min.js"></script>
+	<script src="../../../dist/Chart.js"></script>
 	<script src="../../utils.js"></script>
 	<style>
 		canvas {
@@ -83,7 +82,7 @@
 					text: 'Chart.js Time Point Data'
 				},
 				scales: {
-					x: {
+					xAxes: [{
 						type: 'time',
 						display: true,
 						scaleLabel: {
@@ -92,23 +91,18 @@
 						},
 						ticks: {
 							major: {
-								enabled: true
-							},
-							fontStyle: function(context) {
-								return context.tick && context.tick.major ? 'bold' : undefined;
-							},
-							fontColor: function(context) {
-								return context.tick && context.tick.major ? '#FF0000' : undefined;
+								fontStyle: 'bold',
+								fontColor: '#FF0000'
 							}
 						}
-					},
-					y: {
+					}],
+					yAxes: [{
 						display: true,
 						scaleLabel: {
 							display: true,
 							labelString: 'value'
 						}
-					}
+					}]
 				}
 			}
 		};

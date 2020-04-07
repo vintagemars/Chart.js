@@ -8,7 +8,7 @@ TARGET_REPO_URL="https://$GITHUB_AUTH_TOKEN@github.com/chartjs/chartjs.github.io
 VERSION_REGEX='[[:digit:]]+.[[:digit:]]+.[[:digit:]]+(-.*)?'
 
 # Make sure that this script is executed only for the release and master branches
-if [[ "$TRAVIS_BRANCH" =~ ^release.*$ ]]; then
+if [ "$TRAVIS_BRANCH" == "release" ]; then
     # Travis executes this script from the repository root, so at the same level than package.json
     VERSION=$(node -p -e "require('./package.json').version")
 elif [ "$TRAVIS_BRANCH" == "master" ]; then
@@ -20,22 +20,10 @@ fi
 
 function update_latest {
     local out_path=$1
-
-    # The most recent directory whose name is a version number
     local latest=($(ls -v $out_path | egrep '^('$VERSION_REGEX')$' | tail -1))
-
-    # As soon as a single version is deployed this line is a no-op
     if [ "$latest" == "" ]; then latest='master'; fi
-
-    # Don't update "latest" on alpha or beta releases
-    if [[ "$latest" =~ ^[^-]+$ ]]; then
-        rm -f $out_path/latest
-        ln -s $latest $out_path/latest
-    fi
-
-    # Always update "next"
-    rm -f $out_path/next
-    ln -s $latest $out_path/next
+    rm -f $out_path/latest
+    ln -s $latest $out_path/latest
 }
 
 function deploy_files {

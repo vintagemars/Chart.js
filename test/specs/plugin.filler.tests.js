@@ -7,7 +7,7 @@ describe('Plugin.filler', function() {
 		});
 	}
 
-	describe('auto', jasmine.fixture.specs('plugin.filler'));
+	describe('auto', jasmine.specsFromFixtures('plugin.filler'));
 
 	describe('dataset.fill', function() {
 		it('should support boundaries', function() {
@@ -135,6 +135,8 @@ describe('Plugin.filler', function() {
 						{fill: ''},
 						{fill: null},
 						{fill: []},
+						{fill: {}},
+						{fill: function() {}}
 					]
 				}
 			});
@@ -152,6 +154,8 @@ describe('Plugin.filler', function() {
 				false, // empty string
 				false, // null
 				false, // array
+				false, // object
+				false, // function
 			]);
 		});
 	});

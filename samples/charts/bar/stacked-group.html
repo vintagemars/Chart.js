@@ -3,7 +3,7 @@
 
 <head>
 	<title>Stacked Bar Chart with Groups</title>
-	<script src="../../../dist/Chart.min.js"></script>
+	<script src="../../../dist/Chart.bundle.js"></script>
 	<script src="../../utils.js"></script>
 	<style>
 	canvas {
@@ -80,12 +80,12 @@
 					},
 					responsive: true,
 					scales: {
-						x: {
+						xAxes: [{
 							stacked: true,
-						},
-						y: {
+						}],
+						yAxes: [{
 							stacked: true
-						}
+						}]
 					}
 				}
 			});

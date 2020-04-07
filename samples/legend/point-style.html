@@ -3,7 +3,7 @@
 
 <head>
 	<title>Legend Point Style</title>
-	<script src="../../dist/Chart.min.js"></script>
+	<script src="../../dist/Chart.bundle.js"></script>
 	<script src="../utils.js"></script>
 	<style>
 		canvas {
@@ -68,20 +68,20 @@
 						}
 					},
 					scales: {
-						x: {
+						xAxes: [{
 							display: true,
 							scaleLabel: {
 								display: true,
 								labelString: 'Month'
 							}
-						},
-						y: {
+						}],
+						yAxes: [{
 							display: true,
 							scaleLabel: {
 								display: true,
 								labelString: 'Value'
 							}
-						}
+						}]
 					},
 					title: {
 						display: true,

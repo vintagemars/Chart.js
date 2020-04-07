@@ -3,7 +3,7 @@
 
 <head>
 	<title>Line Chart - Cubic interpolation mode</title>
-	<script src="../../../dist/Chart.min.js"></script>
+	<script src="../../../dist/Chart.bundle.js"></script>
 	<script src="../../utils.js"></script>
 	<style>
 	canvas{
@@ -64,21 +64,23 @@
 					mode: 'index'
 				},
 				scales: {
-					x: {
+					xAxes: [{
 						display: true,
 						scaleLabel: {
 							display: true
 						}
-					},
-					y: {
+					}],
+					yAxes: [{
 						display: true,
 						scaleLabel: {
 							display: true,
 							labelString: 'Value'
 						},
-						suggestedMin: -10,
-						suggestedMax: 200
-					}
+						ticks: {
+							suggestedMin: -10,
+							suggestedMax: 200,
+						}
+					}]
 				}
 			}
 		};

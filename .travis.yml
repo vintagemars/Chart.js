@@ -1,12 +1,11 @@
 language: node_js
 node_js:
-  - lts/*
+  - "6"
 
 before_install:
   - "export CHROME_BIN=/usr/bin/google-chrome"
-
-services:
-  - xvfb
+  - "export DISPLAY=:99.0"
+  - "sh -e /etc/init.d/xvfb start"
 
 script:
   - gulp build
@@ -16,8 +15,11 @@ script:
   - gulp bower
   - cat ./coverage/lcov.info | ./node_modules/.bin/coveralls || true
 
+notifications:
+  slack: chartjs:pcfCZR6ugg5TEcaLtmIfQYuA
+
 sudo: required
-dist: bionic
+dist: trusty
 
 addons:
   chrome: stable
@@ -37,16 +39,16 @@ deploy:
   script: ./scripts/release.sh
   skip_cleanup: true
   on:
-    all_branches: true
-    condition: $TRAVIS_BRANCH =~ ^(release.*)$
+    branch: release
 - provider: releases
   api_key: $GITHUB_AUTH_TOKEN
-  skip_cleanup: true
-  file_glob: true
   file:
-  - ./dist/*.css
-  - ./dist/*.js
-  - ./dist/*.zip
+  - "./dist/Chart.bundle.js"
+  - "./dist/Chart.bundle.min.js"
+  - "./dist/Chart.js"
+  - "./dist/Chart.min.js"
+  - "./dist/Chart.js.zip"
+  skip_cleanup: true
   on:
     tags: true
 - provider: npm

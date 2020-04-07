@@ -34,18 +34,18 @@ Dataset controllers must implement the following interface.
     draw: function(ease) {},
 
     // Remove hover styling from the given element
-    removeHoverStyle: function(element, datasetIndex, index) {},
+    removeHoverStyle: function(element) {},
 
     // Add hover styling to the given element
-    setHoverStyle: function(element, datasetIndex, index) {},
+    setHoverStyle: function(element) {},
 
     // Update the elements in response to new data
     // @param reset : if true, put the elements into a reset state so they can animate to their final values
-    update: function(reset) {}
+    update: function(reset) {},
 }
 ```
 
-The following methods may optionally be overridden by derived dataset controllers.
+The following methods may optionally be overridden by derived dataset controllers
 ```javascript
 {
     // Initializes the controller
@@ -67,7 +67,6 @@ Extending or replacing an existing controller type is easy. Simply replace the c
 The built in controller types are:
 * `Chart.controllers.line`
 * `Chart.controllers.bar`
-* `Chart.controllers.horizontalBar`
 * `Chart.controllers.radar`
 * `Chart.controllers.doughnut`
 * `Chart.controllers.polarArea`
@@ -90,13 +89,13 @@ var custom = Chart.controllers.bubble.extend({
         // Now we can do some custom drawing for this dataset. Here we'll draw a red box around the first point in each dataset
         var meta = this.getMeta();
         var pt0 = meta.data[0];
-        var radius = pt0.radius;
+        var radius = pt0._view.radius;
 
         var ctx = this.chart.chart.ctx;
         ctx.save();
         ctx.strokeStyle = 'red';
         ctx.lineWidth = 1;
-        ctx.strokeRect(pt0.x - radius, pt0.y - radius, 2 * radius, 2 * radius);
+        ctx.strokeRect(pt0._view.x - radius, pt0._view.y - radius, 2 * radius, 2 * radius);
         ctx.restore();
     }
 });
@@ -109,7 +108,7 @@ Chart.controllers.derivedBubble = custom;
 new Chart(ctx, {
     type: 'derivedBubble',
     data: data,
-    options: options
+    options: options,
 });
 ```
 

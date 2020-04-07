@@ -3,9 +3,9 @@
 
 <head>
 	<title>Custom Tooltips using Data Points</title>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
-	<script src="../../dist/Chart.min.js"></script>
+	<script src="../../dist/Chart.bundle.js"></script>
 	<script src="../utils.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
 	<style>
 		canvas{
 			-moz-user-select: none;
@@ -57,7 +57,7 @@
 
 			if (tooltip.dataPoints.length > 0) {
 				tooltip.dataPoints.forEach(function(dataPoint) {
-					var content = [dataPoint.label, dataPoint.value].join(': ');
+					var content = [dataPoint.xLabel, dataPoint.yLabel].join(': ');
 					var $tooltip = $('#tooltip-' + dataPoint.datasetIndex);
 
 					$tooltip.html(content);

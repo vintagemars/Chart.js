@@ -3,7 +3,7 @@
 
 <head>
 	<title>Pie Chart with Custom Tooltips</title>
-	<script src="../../dist/Chart.min.js"></script>
+	<script src="../../dist/Chart.bundle.js"></script>
 	<script src="../utils.js"></script>
 
 	<style>
@@ -43,7 +43,7 @@
 	</div>
 
 	<script>
-		Chart.default.tooltips.custom = function(tooltip) {
+		Chart.defaults.global.tooltips.custom = function(tooltip) {
 			// Tooltip Element
 			var tooltipEl = document.getElementById('chartjs-tooltip');
 

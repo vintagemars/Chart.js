@@ -1,4 +1,7 @@
-export {default as Arc} from './element.arc';
-export {default as Line} from './element.line';
-export {default as Point} from './element.point';
-export {default as Rectangle} from './element.rectangle';
+'use strict';
+
+module.exports = {};
+module.exports.Arc = require('./element.arc');
+module.exports.Line = require('./element.line');
+module.exports.Point = require('./element.point');
+module.exports.Rectangle = require('./element.rectangle');

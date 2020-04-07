@@ -1,111 +1,135 @@
-import Scale from '../core/core.scale';
+'use strict';
 
-const defaultConfig = {
+var Scale = require('../core/core.scale');
+var scaleService = require('../core/core.scaleService');
+
+module.exports = function() {
+
+	// Default config for a category scale
+	var defaultConfig = {
+		position: 'bottom'
+	};
+
+	var DatasetScale = Scale.extend({
+		/**
+		* Internal function to get the correct labels. If data.xLabels or data.yLabels are defined, use those
+		* else fall back to data.labels
+		* @private
+		*/
+		getLabels: function() {
+			var data = this.chart.data;
+			return this.options.labels || (this.isHorizontal() ? data.xLabels : data.yLabels) || data.labels;
+		},
+
+		determineDataLimits: function() {
+			var me = this;
+			var labels = me.getLabels();
+			me.minIndex = 0;
+			me.maxIndex = labels.length - 1;
+			var findIndex;
+
+			if (me.options.ticks.min !== undefined) {
+				// user specified min value
+				findIndex = labels.indexOf(me.options.ticks.min);
+				me.minIndex = findIndex !== -1 ? findIndex : me.minIndex;
+			}
+
+			if (me.options.ticks.max !== undefined) {
+				// user specified max value
+				findIndex = labels.indexOf(me.options.ticks.max);
+				me.maxIndex = findIndex !== -1 ? findIndex : me.maxIndex;
+			}
+
+			me.min = labels[me.minIndex];
+			me.max = labels[me.maxIndex];
+		},
+
+		buildTicks: function() {
+			var me = this;
+			var labels = me.getLabels();
+			// If we are viewing some subset of labels, slice the original array
+			me.ticks = (me.minIndex === 0 && me.maxIndex === labels.length - 1) ? labels : labels.slice(me.minIndex, me.maxIndex + 1);
+		},
+
+		getLabelForIndex: function(index, datasetIndex) {
+			var me = this;
+			var data = me.chart.data;
+			var isHorizontal = me.isHorizontal();
+
+			if (data.yLabels && !isHorizontal) {
+				return me.getRightValue(data.datasets[datasetIndex].data[index]);
+			}
+			return me.ticks[index - me.minIndex];
+		},
+
+		// Used to get data value locations.  Value can either be an index or a numerical value
+		getPixelForValue: function(value, index) {
+			var me = this;
+			var offset = me.options.offset;
+			// 1 is added because we need the length but we have the indexes
+			var offsetAmt = Math.max((me.maxIndex + 1 - me.minIndex - (offset ? 0 : 1)), 1);
+
+			// If value is a data object, then index is the index in the data array,
+			// not the index of the scale. We need to change that.
+			var valueCategory;
+			if (value !== undefined && value !== null) {
+				valueCategory = me.isHorizontal() ? value.x : value.y;
+			}
+			if (valueCategory !== undefined || (value !== undefined && isNaN(index))) {
+				var labels = me.getLabels();
+				value = valueCategory || value;
+				var idx = labels.indexOf(value);
+				index = idx !== -1 ? idx : index;
+			}
+
+			if (me.isHorizontal()) {
+				var valueWidth = me.width / offsetAmt;
+				var widthOffset = (valueWidth * (index - me.minIndex));
+
+				if (offset) {
+					widthOffset += (valueWidth / 2);
+				}
+
+				return me.left + Math.round(widthOffset);
+			}
+			var valueHeight = me.height / offsetAmt;
+			var heightOffset = (valueHeight * (index - me.minIndex));
+
+			if (offset) {
+				heightOffset += (valueHeight / 2);
+			}
+
+			return me.top + Math.round(heightOffset);
+		},
+		getPixelForTick: function(index) {
+			return this.getPixelForValue(this.ticks[index], index + this.minIndex, null);
+		},
+		getValueForPixel: function(pixel) {
+			var me = this;
+			var offset = me.options.offset;
+			var value;
+			var offsetAmt = Math.max((me._ticks.length - (offset ? 0 : 1)), 1);
+			var horz = me.isHorizontal();
+			var valueDimension = (horz ? me.width : me.height) / offsetAmt;
+
+			pixel -= horz ? me.left : me.top;
+
+			if (offset) {
+				pixel -= (valueDimension / 2);
+			}
+
+			if (pixel <= 0) {
+				value = 0;
+			} else {
+				value = Math.round(pixel / valueDimension);
+			}
+
+			return value + me.minIndex;
+		},
+		getBasePixel: function() {
+			return this.bottom;
+		}
+	});
+
+	scaleService.registerScaleType('category', DatasetScale, defaultConfig);
 };
-
-export default class CategoryScale extends Scale {
-
-	static id = 'category';
-	// INTERNAL: static default options, registered in src/index.js
-	static defaults = defaultConfig;
-
-	constructor(cfg) {
-		super(cfg);
-
-		this._numLabels = 0;
-		/** @type {number} */
-		this._startValue = undefined;
-		this._valueRange = 0;
-	}
-
-	parse(raw, index) {
-		const labels = this.getLabels();
-		if (labels[index] === raw) {
-			return index;
-		}
-		const first = labels.indexOf(raw);
-		const last = labels.lastIndexOf(raw);
-		return first === -1 || first !== last ? index : first;
-	}
-
-	determineDataLimits() {
-		const me = this;
-		const max = me.getLabels().length - 1;
-
-		me.min = Math.max(me._userMin || 0, 0);
-		me.max = Math.min(me._userMax || max, max);
-	}
-
-	buildTicks() {
-		const me = this;
-		const min = me.min;
-		const max = me.max;
-		const offset = me.options.offset;
-		let labels = me.getLabels();
-
-		// If we are viewing some subset of labels, slice the original array
-		labels = (min === 0 && max === labels.length - 1) ? labels : labels.slice(min, max + 1);
-
-		me._numLabels = labels.length;
-		me._valueRange = Math.max(labels.length - (offset ? 0 : 1), 1);
-		me._startValue = me.min - (offset ? 0.5 : 0);
-
-		return labels.map((l) => ({value: l}));
-	}
-
-	getLabelForValue(value) {
-		const me = this;
-		const labels = me.getLabels();
-
-		if (value >= 0 && value < labels.length) {
-			return labels[value];
-		}
-		return value;
-	}
-
-	/**
-	 * @protected
-	 */
-	configure() {
-		const me = this;
-
-		super.configure();
-
-		if (!me.isHorizontal()) {
-			// For backward compatibility, vertical category scale reverse is inverted.
-			me._reversePixels = !me._reversePixels;
-		}
-	}
-
-	// Used to get data value locations. Value can either be an index or a numerical value
-	getPixelForValue(value) {
-		const me = this;
-
-		if (typeof value !== 'number') {
-			value = me.parse(value);
-		}
-
-		return me.getPixelForDecimal((value - me._startValue) / me._valueRange);
-	}
-
-	// Must override base implementation becuase it calls getPixelForValue
-	// and category scale can have duplicate values
-	getPixelForTick(index) {
-		const me = this;
-		const ticks = me.ticks;
-		if (index < 0 || index > ticks.length - 1) {
-			return null;
-		}
-		return me.getPixelForValue(index * me._numLabels / ticks.length + me.min);
-	}
-
-	getValueForPixel(pixel) {
-		const me = this;
-		const value = Math.round(me._startValue + me.getDecimalForPixel(pixel) * me._valueRange);
-		return Math.min(Math.max(value, 0), me.ticks.length - 1);
-	}
-
-	getBasePixel() {
-		return this.bottom;
-	}
-}

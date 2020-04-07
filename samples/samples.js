@@ -19,9 +19,6 @@
 		}, {
 			title: 'Stacked groups',
 			path: 'charts/bar/stacked-group.html'
-		}, {
-			title: 'Floating',
-			path: 'charts/bar/float.html'
 		}]
 	}, {
 		title: 'Line charts',
@@ -65,9 +62,6 @@
 	}, {
 		title: 'Other charts',
 		items: [{
-			title: 'Bubble',
-			path: 'charts/bubble.html'
-		}, {
 			title: 'Scatter',
 			path: 'charts/scatter/basic.html'
 		}, {
@@ -79,9 +73,6 @@
 		}, {
 			title: 'Pie',
 			path: 'charts/pie.html'
-		}, {
-			title: 'Multi Series Pie',
-			path: 'charts/multi-series-pie.html'
 		}, {
 			title: 'Polar area',
 			path: 'charts/polar-area.html'
@@ -122,8 +113,8 @@
 			title: 'Line (point data)',
 			path: 'scales/time/line-point-data.html'
 		}, {
-			title: 'Line (break on 2 day gap)',
-			path: 'scales/time/line-max-span.html'
+			title: 'Time Series',
+			path: 'scales/time/financial.html'
 		}, {
 			title: 'Combo',
 			path: 'scales/time/combo.html'
@@ -137,9 +128,6 @@
 			title: 'Grid lines style',
 			path: 'scales/gridlines-style.html'
 		}, {
-			title: 'Scriptable Grid lines',
-			path: 'scales/gridlines-scriptable.html'
-		}, {
 			title: 'Multiline labels',
 			path: 'scales/multiline-labels.html'
 		}, {
@@ -151,15 +139,6 @@
 		}, {
 			title: 'Toggle Scale Type',
 			path: 'scales/toggle-scale-type.html'
-		}, {
-			title: 'Axes Labels',
-			path: 'scales/axes-labels.html'
-		}, {
-			title: 'Center Positioning',
-			path: 'scales/axis-center-position.html'
-		}, {
-			title: 'Custom major ticks',
-			path: 'scales/financial.html'
 		}]
 	}, {
 		title: 'Legend',
@@ -167,20 +146,8 @@
 			title: 'Positioning',
 			path: 'legend/positioning.html'
 		}, {
-			title: 'Legend Title',
-			path: 'legend/title.html'
-		}, {
 			title: 'Point style',
 			path: 'legend/point-style.html'
-		}, {
-			title: 'Callbacks',
-			path: 'legend/callbacks.html'
-		}]
-	}, {
-		title: 'Title',
-		items: [{
-			title: 'Alignment',
-			path: 'title/alignment.html'
 		}]
 	}, {
 		title: 'Tooltip',
@@ -209,35 +176,8 @@
 	}, {
 		title: 'Scriptable',
 		items: [{
-			title: 'Bar Chart',
-			path: 'scriptable/bar.html'
-		}, {
 			title: 'Bubble Chart',
 			path: 'scriptable/bubble.html'
-		}, {
-			title: 'Pie Chart',
-			path: 'scriptable/pie.html'
-		}, {
-			title: 'Line Chart',
-			path: 'scriptable/line.html'
-		}, {
-			title: 'Polar Area Chart',
-			path: 'scriptable/polar.html'
-		}, {
-			title: 'Radar Chart',
-			path: 'scriptable/radar.html'
-		}]
-	}, {
-		title: 'Animations',
-		items: [{
-			title: 'Delay',
-			path: 'animations/delay.html'
-		}, {
-			title: 'Drop',
-			path: 'animations/drop.html'
-		}, {
-			title: 'Loop',
-			path: 'animations/loop.html'
 		}]
 	}, {
 		title: 'Advanced',
@@ -245,11 +185,8 @@
 			title: 'Progress bar',
 			path: 'advanced/progress-bar.html'
 		}, {
-			title: 'Polar Area Radial Gradient',
-			path: 'advanced/radial-gradient.html'
-		}, {
-			title: 'Line Gradient',
-			path: 'advanced/line-gradient.html'
+			title: 'Data labelling (plugin)',
+			path: 'advanced/data-labelling.html'
 		}]
 	}];
 

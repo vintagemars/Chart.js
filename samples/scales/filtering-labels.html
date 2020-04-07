@@ -3,7 +3,7 @@
 
 <head>
 	<title>Chart with xAxis Filtering</title>
-	<script src="../../dist/Chart.min.js"></script>
+	<script src="../../dist/Chart.bundle.js"></script>
 	<script src="../utils.js"></script>
 	<style>
 		canvas {
@@ -64,7 +64,7 @@
 					text: 'Chart.js Line Chart - X-Axis Filter'
 				},
 				scales: {
-					x: {
+					xAxes: [{
 						display: true,
 						ticks: {
 							callback: function(dataLabel, index) {
@@ -72,11 +72,11 @@
 								return index % 2 === 0 ? dataLabel : '';
 							}
 						}
-					},
-					y: {
+					}],
+					yAxes: [{
 						display: true,
 						beginAtZero: false
-					}
+					}]
 				}
 			}
 		};

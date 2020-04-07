@@ -1,214 +1,129 @@
-import Animator from './core.animator';
-import Animation from './core.animation';
-import defaults from './core.defaults';
-import {noop, isObject} from '../helpers/helpers.core';
+/* global window: false */
+'use strict';
 
-const numbers = ['x', 'y', 'borderWidth', 'radius', 'tension'];
-const colors = ['borderColor', 'backgroundColor'];
+var defaults = require('./core.defaults');
+var helpers = require('../helpers/index');
 
-defaults.set('animation', {
-	// Plain properties can be overridden in each object
-	duration: 1000,
-	easing: 'easeOutQuart',
-	onProgress: noop,
-	onComplete: noop,
-
-	// Property sets
-	colors: {
-		type: 'color',
-		properties: colors
-	},
-	numbers: {
-		type: 'number',
-		properties: numbers
-	},
-
-	// Update modes. These are overrides / additions to the above animations.
-	active: {
-		duration: 400
-	},
-	resize: {
-		duration: 0
-	},
-	show: {
-		colors: {
-			type: 'color',
-			properties: colors,
-			from: 'transparent'
-		},
-		visible: {
-			type: 'boolean',
-			duration: 0 // show immediately
-		},
-	},
-	hide: {
-		colors: {
-			type: 'color',
-			properties: colors,
-			to: 'transparent'
-		},
-		visible: {
-			type: 'boolean',
-			easing: 'easeInExpo' // for keeping the dataset visible almost all the way through the animation
-		},
+defaults._set('global', {
+	animation: {
+		duration: 1000,
+		easing: 'easeOutQuart',
+		onProgress: helpers.noop,
+		onComplete: helpers.noop
 	}
 });
 
-function copyOptions(target, values) {
-	const oldOpts = target.options;
-	const newOpts = values.options;
-	if (!oldOpts || !newOpts || newOpts.$shared) {
-		return;
-	}
-	if (oldOpts.$shared) {
-		target.options = Object.assign({}, oldOpts, newOpts, {$shared: false});
-	} else {
-		Object.assign(oldOpts, newOpts);
-	}
-	delete values.options;
-}
+module.exports = {
+	frameDuration: 17,
+	animations: [],
+	dropFrames: 0,
+	request: null,
 
-function extensibleConfig(animations) {
-	const result = {};
-	Object.keys(animations).forEach(key => {
-		const value = animations[key];
-		if (!isObject(value)) {
-			result[key] = value;
-		}
-	});
-	return result;
-}
+	/**
+	 * @param {Chart} chart - The chart to animate.
+	 * @param {Chart.Animation} animation - The animation that we will animate.
+	 * @param {Number} duration - The animation duration in ms.
+	 * @param {Boolean} lazy - if true, the chart is not marked as animating to enable more responsive interactions
+	 */
+	addAnimation: function(chart, animation, duration, lazy) {
+		var animations = this.animations;
+		var i, ilen;
 
-export default class Animations {
-	constructor(chart, animations) {
-		this._chart = chart;
-		this._properties = new Map();
-		this.configure(animations);
-	}
+		animation.chart = chart;
 
-	configure(animations) {
-		if (!isObject(animations)) {
-			return;
+		if (!lazy) {
+			chart.animating = true;
 		}
 
-		const animatedProps = this._properties;
-		const animDefaults = extensibleConfig(animations);
-
-		Object.keys(animations).forEach(key => {
-			const cfg = animations[key];
-			if (!isObject(cfg)) {
+		for (i = 0, ilen = animations.length; i < ilen; ++i) {
+			if (animations[i].chart === chart) {
+				animations[i] = animation;
 				return;
 			}
-			(cfg.properties || [key]).forEach((prop) => {
-				// Can have only one config per animation.
-				if (!animatedProps.has(prop)) {
-					animatedProps.set(prop, Object.assign({}, animDefaults, cfg));
-				} else if (prop === key) {
-					// Single property targetting config wins over multi-targetting.
-					animatedProps.set(prop, Object.assign({}, animatedProps.get(prop), cfg));
-				}
-			});
+		}
+
+		animations.push(animation);
+
+		// If there are no animations queued, manually kickstart a digest, for lack of a better word
+		if (animations.length === 1) {
+			this.requestAnimationFrame();
+		}
+	},
+
+	cancelAnimation: function(chart) {
+		var index = helpers.findIndex(this.animations, function(animation) {
+			return animation.chart === chart;
 		});
-	}
 
-	/**
-	 * Utility to handle animation of `options`.
-	 * This should not be called, when animating $shared options to $shared new options.
-	 * @private
-	 * @todo if new options are $shared, target.options should be replaced with those new shared
-	 *  options after all animations have completed
-	 */
-	_animateOptions(target, values) {
-		const newOptions = values.options;
-		let animations = [];
+		if (index !== -1) {
+			this.animations.splice(index, 1);
+			chart.animating = false;
+		}
+	},
 
-		if (!newOptions) {
-			return animations;
+	requestAnimationFrame: function() {
+		var me = this;
+		if (me.request === null) {
+			// Skip animation frame requests until the active one is executed.
+			// This can happen when processing mouse events, e.g. 'mousemove'
+			// and 'mouseout' events will trigger multiple renders.
+			me.request = helpers.requestAnimFrame.call(window, function() {
+				me.request = null;
+				me.startDigest();
+			});
 		}
-		let options = target.options;
-		if (options) {
-			if (options.$shared) {
-				// If the current / old options are $shared, meaning other elements are
-				// using the same options, we need to clone to become unique.
-				target.options = options = Object.assign({}, options, {$shared: false, $animations: {}});
-			}
-			animations = this._createAnimations(options, newOptions);
-		} else {
-			target.options = newOptions;
-		}
-		return animations;
-	}
+	},
 
 	/**
 	 * @private
 	 */
-	_createAnimations(target, values) {
-		const animatedProps = this._properties;
-		const animations = [];
-		const running = target.$animations || (target.$animations = {});
-		const props = Object.keys(values);
-		const date = Date.now();
-		let i;
+	startDigest: function() {
+		var me = this;
+		var startTime = Date.now();
+		var framesToDrop = 0;
 
-		for (i = props.length - 1; i >= 0; --i) {
-			const prop = props[i];
-			if (prop.charAt(0) === '$') {
-				continue;
-			}
-
-			if (prop === 'options') {
-				animations.push(...this._animateOptions(target, values));
-				continue;
-			}
-			const value = values[prop];
-			let animation = running[prop];
-			const cfg = animatedProps.get(prop);
-
-			if (animation) {
-				if (cfg && animation.active()) {
-					// There is an existing active animation, let's update that
-					animation.update(cfg, value, date);
-					continue;
-				} else {
-					animation.cancel();
-				}
-			}
-			if (!cfg || !cfg.duration) {
-				// not animated, set directly to new value
-				target[prop] = value;
-				continue;
-			}
-
-			running[prop] = animation = new Animation(cfg, target, prop, value);
-			animations.push(animation);
+		if (me.dropFrames > 1) {
+			framesToDrop = Math.floor(me.dropFrames);
+			me.dropFrames = me.dropFrames % 1;
 		}
-		return animations;
-	}
 
+		me.advance(1 + framesToDrop);
+
+		var endTime = Date.now();
+
+		me.dropFrames += (endTime - startTime) / me.frameDuration;
+
+		// Do we have more stuff to animate?
+		if (me.animations.length > 0) {
+			me.requestAnimationFrame();
+		}
+	},
 
 	/**
-	 * Update `target` properties to new values, using configured animations
-	 * @param {object} target - object to update
-	 * @param {object} values - new target properties
-	 * @returns {boolean|undefined} - `true` if animations were started
-	 **/
-	update(target, values) {
-		if (this._properties.size === 0) {
-			// Nothing is animated, just apply the new values.
-			// Options can be shared, need to account for that.
-			copyOptions(target, values);
-			// copyOptions removes the `options` from `values`,
-			// unless it can be directly assigned.
-			Object.assign(target, values);
-			return;
-		}
+	 * @private
+	 */
+	advance: function(count) {
+		var animations = this.animations;
+		var animation, chart;
+		var i = 0;
 
-		const animations = this._createAnimations(target, values);
+		while (i < animations.length) {
+			animation = animations[i];
+			chart = animation.chart;
 
-		if (animations.length) {
-			Animator.add(this._chart, animations);
-			return true;
+			animation.currentStep = (animation.currentStep || 0) + count;
+			animation.currentStep = Math.min(animation.currentStep, animation.numSteps);
+
+			helpers.callback(animation.render, [chart, animation], chart);
+			helpers.callback(animation.onAnimationProgress, [animation], chart);
+
+			if (animation.currentStep >= animation.numSteps) {
+				helpers.callback(animation.onAnimationComplete, [animation], chart);
+				chart.animating = false;
+				animations.splice(i, 1);
+			} else {
+				++i;
+			}
 		}
 	}
-}
-
+};

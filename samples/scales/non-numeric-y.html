@@ -3,7 +3,7 @@
 
 <head>
 	<title>Line Chart</title>
-	<script src="../../dist/Chart.min.js"></script>
+	<script src="../../dist/Chart.bundle.js"></script>
 	<script src="../utils.js"></script>
 	<style>
 	canvas{
@@ -39,14 +39,14 @@
 					text: 'Chart with Non Numeric Y Axis'
 				},
 				scales: {
-					x: {
+					xAxes: [{
 						display: true,
 						scaleLabel: {
 							display: true,
 							labelString: 'Month'
 						}
-					},
-					y: {
+					}],
+					yAxes: [{
 						type: 'category',
 						position: 'left',
 						display: true,
@@ -54,8 +54,10 @@
 							display: true,
 							labelString: 'Request State'
 						},
-						reverse: true
-					}
+						ticks: {
+							reverse: true
+						}
+					}]
 				}
 			}
 		};

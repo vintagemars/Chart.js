@@ -1,31 +1,24 @@
 // Time scale tests
 describe('Time scale tests', function() {
-	describe('auto', jasmine.fixture.specs('scale.time'));
+	function createScale(data, options) {
+		var scaleID = 'myScale';
+		var mockContext = window.createMockContext();
+		var Constructor = Chart.scaleService.getScaleConstructor('time');
+		var scale = new Constructor({
+			ctx: mockContext,
+			options: options,
+			chart: {
+				data: data
+			},
+			id: scaleID
+		});
 
-	function createScale(data, options, dimensions) {
-		var width = (dimensions && dimensions.width) || 400;
-		var height = (dimensions && dimensions.height) || 50;
-
-		options = options || {};
-		options.type = 'time';
-		options.id = 'xScale0';
-
-		var chart = window.acquireChart({
-			type: 'line',
-			data: data,
-			options: {
-				scales: {
-					x: options
-				}
-			}
-		}, {canvas: {width: width, height: height}});
-
-
-		return chart.scales.x;
+		scale.update(400, 50);
+		return scale;
 	}
 
-	function getLabels(scale) {
-		return scale.ticks.map(t => t.label);
+	function getTicksLabels(scale) {
+		return scale.ticks;
 	}
 
 	beforeEach(function() {
@@ -33,9 +26,9 @@ describe('Time scale tests', function() {
 		jasmine.addMatchers({
 			toBeCloseToTime: function() {
 				return {
-					compare: function(time, expected) {
+					compare: function(actual, expected) {
 						var result = false;
-						var actual = moment(time);
+
 						var diff = actual.diff(expected.value, expected.unit, true);
 						result = Math.abs(diff) < (expected.threshold !== undefined ? expected.threshold : 0.01);
 
@@ -63,7 +56,7 @@ describe('Time scale tests', function() {
 		expect(defaultConfig).toEqual({
 			display: true,
 			gridLines: {
-				color: 'rgba(0,0,0,0.1)',
+				color: 'rgba(0, 0, 0, 0.1)',
 				drawBorder: true,
 				drawOnChartArea: true,
 				drawTicks: true,
@@ -71,22 +64,26 @@ describe('Time scale tests', function() {
 				lineWidth: 1,
 				offsetGridLines: false,
 				display: true,
+				zeroLineColor: 'rgba(0,0,0,0.25)',
+				zeroLineWidth: 1,
+				zeroLineBorderDash: [],
+				zeroLineBorderDashOffset: 0.0,
 				borderDash: [],
 				borderDashOffset: 0.0
 			},
+			position: 'bottom',
 			offset: false,
-			reverse: false,
-			beginAtZero: false,
 			scaleLabel: Chart.defaults.scale.scaleLabel,
 			bounds: 'data',
 			distribution: 'linear',
-			adapters: {},
 			ticks: {
+				beginAtZero: false,
 				minRotation: 0,
 				maxRotation: 50,
 				mirror: false,
 				source: 'auto',
 				padding: 0,
+				reverse: false,
 				display: true,
 				callback: defaultConfig.ticks.callback, // make this nicer, then check explicitly below,
 				autoSkip: false,
@@ -96,16 +93,26 @@ describe('Time scale tests', function() {
 				major: {
 					enabled: false
 				},
-				lineWidth: 0,
-				strokeStyle: '',
 			},
 			time: {
 				parser: false,
+				format: false,
 				unit: false,
 				round: false,
 				isoWeekday: false,
+				displayFormat: false,
 				minUnit: 'millisecond',
-				displayFormats: {}
+				displayFormats: {
+					millisecond: 'h:mm:ss.SSS a', // 11:20:01.123 AM
+					second: 'h:mm:ss a', // 11:20:01 AM
+					minute: 'h:mm a', // 11:20 AM
+					hour: 'hA', // 5PM
+					day: 'MMM D', // Sep 4
+					week: 'll', // Week 46, or maybe "[W]WW - YYYY" ?
+					month: 'MMM YYYY', // Sept 2015
+					quarter: '[Q]Q - YYYY', // Q3
+					year: 'YYYY' // 2015
+				},
 			}
 		});
 
@@ -113,38 +120,252 @@ describe('Time scale tests', function() {
 		expect(defaultConfig.ticks.callback).toEqual(jasmine.any(Function));
 	});
 
-	it('should correctly determine the unit', function() {
-		var date = moment('Jan 01 1990', 'MMM DD YYYY');
-		var data = [];
-		for (var i = 0; i < 60; i++) {
-			data.push({x: date.valueOf(), y: Math.random()});
-			date = date.clone().add(1, 'month');
+	describe('when given inputs of different types', function() {
+		// Helper to build date objects
+		function newDateFromRef(days) {
+			return moment('01/01/2015 12:00', 'DD/MM/YYYY HH:mm').add(days, 'd').toDate();
 		}
 
+		it('should accept labels as strings', function() {
+			var mockData = {
+				labels: ['2015-01-01T12:00:00', '2015-01-02T21:00:00', '2015-01-03T22:00:00', '2015-01-05T23:00:00', '2015-01-07T03:00', '2015-01-08T10:00', '2015-01-10T12:00'], // days
+			};
+
+			var scaleOptions = Chart.scaleService.getScaleDefaults('time');
+			var scale = createScale(mockData, scaleOptions);
+			scale.update(1000, 200);
+			var ticks = getTicksLabels(scale);
+
+			// `bounds === 'data'`: first and last ticks removed since outside the data range
+			expect(ticks).toEqual(['Jan 2', 'Jan 3', 'Jan 4', 'Jan 5', 'Jan 6', 'Jan 7', 'Jan 8', 'Jan 9', 'Jan 10']);
+		});
+
+		it('should accept labels as date objects', function() {
+			var mockData = {
+				labels: [newDateFromRef(0), newDateFromRef(1), newDateFromRef(2), newDateFromRef(4), newDateFromRef(6), newDateFromRef(7), newDateFromRef(9)], // days
+			};
+			var scale = createScale(mockData, Chart.scaleService.getScaleDefaults('time'));
+			scale.update(1000, 200);
+			var ticks = getTicksLabels(scale);
+
+			// `bounds === 'data'`: first and last ticks removed since outside the data range
+			expect(ticks).toEqual(['Jan 2', 'Jan 3', 'Jan 4', 'Jan 5', 'Jan 6', 'Jan 7', 'Jan 8', 'Jan 9', 'Jan 10']);
+		});
+
+		it('should accept data as xy points', function() {
+			var chart = window.acquireChart({
+				type: 'line',
+				data: {
+					datasets: [{
+						xAxisID: 'xScale0',
+						data: [{
+							x: newDateFromRef(0),
+							y: 1
+						}, {
+							x: newDateFromRef(1),
+							y: 10
+						}, {
+							x: newDateFromRef(2),
+							y: 0
+						}, {
+							x: newDateFromRef(4),
+							y: 5
+						}, {
+							x: newDateFromRef(6),
+							y: 77
+						}, {
+							x: newDateFromRef(7),
+							y: 9
+						}, {
+							x: newDateFromRef(9),
+							y: 5
+						}]
+					}],
+				},
+				options: {
+					scales: {
+						xAxes: [{
+							id: 'xScale0',
+							type: 'time',
+							position: 'bottom'
+						}],
+					}
+				}
+			});
+
+			var xScale = chart.scales.xScale0;
+			xScale.update(800, 200);
+			var ticks = getTicksLabels(xScale);
+
+			// `bounds === 'data'`: first and last ticks removed since outside the data range
+			expect(ticks).toEqual(['Jan 2', 'Jan 3', 'Jan 4', 'Jan 5', 'Jan 6', 'Jan 7', 'Jan 8', 'Jan 9', 'Jan 10']);
+		});
+
+		it('should accept data as ty points', function() {
+			var chart = window.acquireChart({
+				type: 'line',
+				data: {
+					datasets: [{
+						xAxisID: 'tScale0',
+						data: [{
+							t: newDateFromRef(0),
+							y: 1
+						}, {
+							t: newDateFromRef(1),
+							y: 10
+						}, {
+							t: newDateFromRef(2),
+							y: 0
+						}, {
+							t: newDateFromRef(4),
+							y: 5
+						}, {
+							t: newDateFromRef(6),
+							y: 77
+						}, {
+							t: newDateFromRef(7),
+							y: 9
+						}, {
+							t: newDateFromRef(9),
+							y: 5
+						}]
+					}],
+				},
+				options: {
+					scales: {
+						xAxes: [{
+							id: 'tScale0',
+							type: 'time',
+							position: 'bottom'
+						}],
+					}
+				}
+			});
+
+			var tScale = chart.scales.tScale0;
+			tScale.update(800, 200);
+			var ticks = getTicksLabels(tScale);
+
+			// `bounds === 'data'`: first and last ticks removed since outside the data range
+			expect(ticks).toEqual(['Jan 2', 'Jan 3', 'Jan 4', 'Jan 5', 'Jan 6', 'Jan 7', 'Jan 8', 'Jan 9', 'Jan 10']);
+		});
+	});
+
+	it('should allow custom time parsers', function() {
 		var chart = window.acquireChart({
 			type: 'line',
 			data: {
+				labels: ['foo', 'bar'],
 				datasets: [{
-					xAxisID: 'x',
-					data: data
+					xAxisID: 'xScale0',
+					data: [0, 1]
 				}],
 			},
 			options: {
 				scales: {
-					x: {
+					xAxes: [{
+						id: 'xScale0',
 						type: 'time',
+						position: 'bottom',
+						time: {
+							unit: 'day',
+							round: true,
+							parser: function(label) {
+								return label === 'foo' ?
+									moment('2000/01/02', 'YYYY/MM/DD') :
+									moment('2016/05/08', 'YYYY/MM/DD');
+							}
+						},
 						ticks: {
-							source: 'data',
-							autoSkip: true
+							source: 'labels'
 						}
-					},
+					}],
 				}
 			}
 		});
 
-		var scale = chart.scales.x;
+		// Counts down because the lines are drawn top to bottom
+		var xScale = chart.scales.xScale0;
 
-		expect(scale._unit).toEqual('month');
+		// Counts down because the lines are drawn top to bottom
+		expect(xScale.ticks[0]).toBe('Jan 2');
+		expect(xScale.ticks[1]).toBe('May 8');
+	});
+
+	it('should build ticks using the config unit', function() {
+		var mockData = {
+			labels: ['2015-01-01T20:00:00', '2015-01-02T21:00:00'], // days
+		};
+
+		var config = Chart.helpers.clone(Chart.scaleService.getScaleDefaults('time'));
+		config.time.unit = 'hour';
+
+		var scale = createScale(mockData, config);
+		scale.update(2500, 200);
+		var ticks = getTicksLabels(scale);
+
+		expect(ticks).toEqual(['8PM', '9PM', '10PM', '11PM', '12AM', '1AM', '2AM', '3AM', '4AM', '5AM', '6AM', '7AM', '8AM', '9AM', '10AM', '11AM', '12PM', '1PM', '2PM', '3PM', '4PM', '5PM', '6PM', '7PM', '8PM', '9PM']);
+	});
+
+	it('build ticks honoring the minUnit', function() {
+		var mockData = {
+			labels: ['2015-01-01T20:00:00', '2015-01-02T21:00:00'], // days
+		};
+
+		var config = Chart.helpers.mergeIf({
+			bounds: 'ticks',
+			time: {
+				minUnit: 'day'
+			}
+		}, Chart.scaleService.getScaleDefaults('time'));
+
+		var scale = createScale(mockData, config);
+		var ticks = getTicksLabels(scale);
+
+		expect(ticks).toEqual(['Jan 1', 'Jan 2', 'Jan 3']);
+	});
+
+	it('should build ticks using the config diff', function() {
+		var mockData = {
+			labels: ['2015-01-01T20:00:00', '2015-02-02T21:00:00', '2015-02-21T01:00:00'], // days
+		};
+
+		var config = Chart.helpers.mergeIf({
+			bounds: 'ticks',
+			time: {
+				unit: 'week',
+				round: 'week'
+			}
+		}, Chart.scaleService.getScaleDefaults('time'));
+
+		var scale = createScale(mockData, config);
+		scale.update(800, 200);
+		var ticks = getTicksLabels(scale);
+
+		// last date is feb 15 because we round to start of week
+		expect(ticks).toEqual(['Dec 28, 2014', 'Jan 4, 2015', 'Jan 11, 2015', 'Jan 18, 2015', 'Jan 25, 2015', 'Feb 1, 2015', 'Feb 8, 2015', 'Feb 15, 2015']);
+	});
+
+	describe('config step size', function() {
+		it('should use the stepSize property', function() {
+			var mockData = {
+				labels: ['2015-01-01T20:00:00', '2015-01-01T21:00:00'],
+			};
+
+			var config = Chart.helpers.mergeIf({
+				bounds: 'ticks',
+				time: {
+					unit: 'hour',
+					stepSize: 2
+				}
+			}, Chart.scaleService.getScaleDefaults('time'));
+
+			var scale = createScale(mockData, config);
+			scale.update(2500, 200);
+			var ticks = getTicksLabels(scale);
+
+			expect(ticks).toEqual(['8PM', '10PM']);
+		});
 	});
 
 	describe('when specifying limits', function() {
@@ -160,72 +381,31 @@ describe('Time scale tests', function() {
 		});
 
 		it('should use the min option when less than first label for building ticks', function() {
-			config.min = '2014-12-29T04:00:00';
+			config.time.min = '2014-12-29T04:00:00';
 
-			var labels = getLabels(createScale(mockData, config));
-			expect(labels[0]).toEqual('Jan 1');
+			var scale = createScale(mockData, config);
+			expect(scale.ticks[0]).toEqual('Jan 1');
 		});
 
 		it('should use the min option when greater than first label for building ticks', function() {
-			config.min = '2015-01-02T04:00:00';
+			config.time.min = '2015-01-02T04:00:00';
 
-			var labels = getLabels(createScale(mockData, config));
-			expect(labels[0]).toEqual('Jan 2');
+			var scale = createScale(mockData, config);
+			expect(scale.ticks[0]).toEqual('Jan 2');
 		});
 
 		it('should use the max option when greater than last label for building ticks', function() {
-			config.max = '2015-01-05T06:00:00';
+			config.time.max = '2015-01-05T06:00:00';
 
-			var labels = getLabels(createScale(mockData, config));
-			expect(labels[labels.length - 1]).toEqual('Jan 3');
+			var scale = createScale(mockData, config);
+			expect(scale.ticks[scale.ticks.length - 1]).toEqual('Jan 3');
 		});
 
 		it('should use the max option when less than last label for building ticks', function() {
-			config.max = '2015-01-02T23:00:00';
+			config.time.max = '2015-01-02T23:00:00';
 
-			var labels = getLabels(createScale(mockData, config));
-			expect(labels[labels.length - 1]).toEqual('Jan 2');
-		});
-	});
-
-	describe('when specifying limits in a deprecated fashion', function() {
-		var mockData = {
-			labels: ['2015-01-01T20:00:00', '2015-01-02T20:00:00', '2015-01-03T20:00:00'],
-		};
-
-		var config;
-		beforeEach(function() {
-			config = Chart.helpers.clone(Chart.scaleService.getScaleDefaults('time'));
-			config.ticks.source = 'labels';
-			config.time.unit = 'day';
-		});
-
-		it('should use the min option when less than first label for building ticks', function() {
-			config.min = '2014-12-29T04:00:00';
-
-			var labels = getLabels(createScale(mockData, config));
-			expect(labels[0]).toEqual('Jan 1');
-		});
-
-		it('should use the min option when greater than first label for building ticks', function() {
-			config.min = '2015-01-02T04:00:00';
-
-			var labels = getLabels(createScale(mockData, config));
-			expect(labels[0]).toEqual('Jan 2');
-		});
-
-		it('should use the max option when greater than last label for building ticks', function() {
-			config.max = '2015-01-05T06:00:00';
-
-			var labels = getLabels(createScale(mockData, config));
-			expect(labels[labels.length - 1]).toEqual('Jan 3');
-		});
-
-		it('should use the max option when less than last label for building ticks', function() {
-			config.max = '2015-01-02T23:00:00';
-
-			var labels = getLabels(createScale(mockData, config));
-			expect(labels[labels.length - 1]).toEqual('Jan 2');
+			var scale = createScale(mockData, config);
+			expect(scale.ticks[scale.ticks.length - 1]).toEqual('Jan 2');
 		});
 	});
 
@@ -247,7 +427,7 @@ describe('Time scale tests', function() {
 		}, Chart.scaleService.getScaleDefaults('time'));
 
 		var scale = createScale(mockData, config);
-		var ticks = getLabels(scale);
+		var ticks = getTicksLabels(scale);
 
 		expect(ticks).toEqual(['Dec 31, 2014', 'Jan 7, 2015']);
 	});
@@ -258,7 +438,7 @@ describe('Time scale tests', function() {
 				type: 'line',
 				data: {
 					datasets: [{
-						xAxisID: 'x',
+						xAxisID: 'xScale0',
 						data: []
 					}],
 					labels: [
@@ -273,15 +453,16 @@ describe('Time scale tests', function() {
 				},
 				options: {
 					scales: {
-						x: {
+						xAxes: [{
+							id: 'xScale0',
 							type: 'time',
 							position: 'bottom'
-						},
+						}],
 					}
 				}
 			});
 
-			this.scale = this.chart.scales.x;
+			this.scale = this.chart.scales.xScale0;
 		});
 
 		it('should be bounded by the nearest week beginnings', function() {
@@ -301,14 +482,14 @@ describe('Time scale tests', function() {
 			var lastPointOffsetMs = moment(chart.config.data.labels[chart.config.data.labels.length - 1]).valueOf() - scale.min;
 			var lastPointPixel = scale.left + lastPointOffsetMs / msPerPix;
 
-			expect(scale.getPixelForValue(moment('2015-01-01T20:00:00').valueOf())).toBeCloseToPixel(firstPointPixel);
-			expect(scale.getPixelForValue(moment(chart.data.labels[0]).valueOf())).toBeCloseToPixel(firstPointPixel);
+			expect(scale.getPixelForValue('', 0, 0)).toBeCloseToPixel(firstPointPixel);
+			expect(scale.getPixelForValue(chart.data.labels[0])).toBeCloseToPixel(firstPointPixel);
 			expect(scale.getValueForPixel(firstPointPixel)).toBeCloseToTime({
 				value: moment(chart.data.labels[0]),
 				unit: 'hour',
 			});
 
-			expect(scale.getPixelForValue(moment('2015-01-10T12:00').valueOf())).toBeCloseToPixel(lastPointPixel);
+			expect(scale.getPixelForValue('', 6, 0)).toBeCloseToPixel(lastPointPixel);
 			expect(scale.getValueForPixel(lastPointPixel)).toBeCloseToTime({
 				value: moment(chart.data.labels[6]),
 				unit: 'hour'
@@ -325,16 +506,18 @@ describe('Time scale tests', function() {
 				},
 				options: {
 					scales: {
-						x: {
+						xAxes: [{
+							id: 'xScale0',
 							type: 'time',
 							bounds: 'ticks',
 							position: 'bottom'
-						},
+						}],
 					}
 				}
-			}, {canvas: {width: 800, height: 200}});
+			});
 
-			this.scale = this.chart.scales.x;
+			this.scale = this.chart.scales.xScale0;
+			this.scale.update(800, 200);
 		});
 
 		it('should be bounded by nearest step\'s year start and end', function() {
@@ -354,22 +537,21 @@ describe('Time scale tests', function() {
 		});
 
 		it('should build the correct ticks', function() {
-			expect(getLabels(this.scale)).toEqual(['2005', '2006', '2007', '2008', '2009', '2010', '2011', '2012', '2013', '2014', '2015', '2016', '2017', '2018']);
+			// Where 'correct' is a two year spacing.
+			expect(getTicksLabels(this.scale)).toEqual(['2005', '2007', '2009', '2011', '2013', '2015', '2017', '2019']);
 		});
 
 		it('should have ticks with accurate labels', function() {
 			var scale = this.scale;
 			var ticks = scale.getTicks();
-			// pixelsPerTick is an aproximation which assumes same number of milliseconds per year (not true)
-			// we use a threshold of 1 day so that we still match these values
-			var pixelsPerTick = scale.width / (ticks.length - 1);
+			var pixelsPerYear = scale.width / 14;
 
 			for (var i = 0; i < ticks.length - 1; i++) {
-				var offset = pixelsPerTick * i;
+				var offset = 2 * pixelsPerYear * i;
 				expect(scale.getValueForPixel(scale.left + offset)).toBeCloseToTime({
 					value: moment(ticks[i].label + '-01-01'),
 					unit: 'day',
-					threshold: 1,
+					threshold: 0.5,
 				});
 			}
 		});
@@ -380,84 +562,26 @@ describe('Time scale tests', function() {
 			type: 'line',
 			data: {
 				datasets: [{
-					xAxisID: 'x',
+					xAxisID: 'xScale0',
 					data: [null, 10, 3]
 				}],
 				labels: ['2015-01-01T20:00:00', '2015-01-02T21:00:00', '2015-01-03T22:00:00', '2015-01-05T23:00:00', '2015-01-07T03:00', '2015-01-08T10:00', '2015-01-10T12:00'], // days
 			},
 			options: {
 				scales: {
-					x: {
+					xAxes: [{
+						id: 'xScale0',
 						type: 'time',
-						position: 'bottom',
-						ticks: {
-							source: 'labels',
-							autoSkip: false
-						}
-					}
+						position: 'bottom'
+					}],
 				}
 			}
 		});
 
-		var xScale = chart.scales.x;
-		var controller = chart.getDatasetMeta(0).controller;
-		expect(xScale.getLabelForValue(controller.getParsed(0)[xScale.id])).toBeTruthy();
-		expect(xScale.getLabelForValue(controller.getParsed(0)[xScale.id])).toBe('Jan 1, 2015, 8:00:00 pm');
-		expect(xScale.getLabelForValue(xScale.getValueForPixel(xScale.getPixelForTick(6)))).toBe('Jan 10, 2015, 12:00:00 pm');
-	});
-
-	describe('when ticks.callback is specified', function() {
-		beforeEach(function() {
-			this.chart = window.acquireChart({
-				type: 'line',
-				data: {
-					datasets: [{
-						xAxisID: 'x',
-						data: [0, 0]
-					}],
-					labels: ['2015-01-01T20:00:00', '2015-01-01T20:01:00']
-				},
-				options: {
-					scales: {
-						x: {
-							type: 'time',
-							time: {
-								displayFormats: {
-									second: 'h:mm:ss'
-								}
-							},
-							ticks: {
-								callback: function(value) {
-									return '<' + value + '>';
-								}
-							}
-						}
-					}
-				}
-			});
-			this.scale = this.chart.scales.x;
-		});
-
-		it('should get the correct labels for ticks', function() {
-			var labels = getLabels(this.scale);
-
-			expect(labels.length).toEqual(21);
-			expect(labels[0]).toEqual('<8:00:00>');
-			expect(labels[labels.length - 1]).toEqual('<8:01:00>');
-		});
-
-		it('should update ticks.callback correctly', function() {
-			var chart = this.chart;
-			chart.options.scales.x.ticks.callback = function(value) {
-				return '{' + value + '}';
-			};
-			chart.update();
-
-			var labels = getLabels(this.scale);
-			expect(labels.length).toEqual(21);
-			expect(labels[0]).toEqual('{8:00:00}');
-			expect(labels[labels.length - 1]).toEqual('{8:01:00}');
-		});
+		var xScale = chart.scales.xScale0;
+		expect(xScale.getLabelForIndex(0, 0)).toBeTruthy();
+		expect(xScale.getLabelForIndex(0, 0)).toBe('2015-01-01T20:00:00');
+		expect(xScale.getLabelForIndex(6, 0)).toBe('2015-01-10T12:00');
 	});
 
 	it('should get the correct label when time is specified as a string', function() {
@@ -465,33 +589,32 @@ describe('Time scale tests', function() {
 			type: 'line',
 			data: {
 				datasets: [{
-					xAxisID: 'x',
+					xAxisID: 'xScale0',
 					data: [{t: '2015-01-01T20:00:00', y: 10}, {t: '2015-01-02T21:00:00', y: 3}]
 				}],
 			},
 			options: {
 				scales: {
-					x: {
+					xAxes: [{
+						id: 'xScale0',
 						type: 'time',
 						position: 'bottom'
-					},
+					}],
 				}
 			}
 		});
 
-		var xScale = chart.scales.x;
-		var controller = chart.getDatasetMeta(0).controller;
-		var value = controller.getParsed(0)[xScale.id];
-		expect(xScale.getLabelForValue(value)).toBeTruthy();
-		expect(xScale.getLabelForValue(value)).toBe('Jan 1, 2015, 8:00:00 pm');
+		var xScale = chart.scales.xScale0;
+		expect(xScale.getLabelForIndex(0, 0)).toBeTruthy();
+		expect(xScale.getLabelForIndex(0, 0)).toBe('2015-01-01T20:00:00');
 	});
 
-	it('should get the correct label for a timestamp', function() {
+	it('should get the correct label for a timestamp with milliseconds', function() {
 		var chart = window.acquireChart({
 			type: 'line',
 			data: {
 				datasets: [{
-					xAxisID: 'x',
+					xAxisID: 'xScale0',
 					data: [
 						{t: +new Date('2018-01-08 05:14:23.234'), y: 10},
 						{t: +new Date('2018-01-09 06:17:43.426'), y: 3}
@@ -500,18 +623,74 @@ describe('Time scale tests', function() {
 			},
 			options: {
 				scales: {
-					x: {
+					xAxes: [{
+						id: 'xScale0',
 						type: 'time',
 						position: 'bottom'
-					},
+					}],
 				}
 			}
 		});
 
-		var xScale = chart.scales.x;
-		var controller = chart.getDatasetMeta(0).controller;
-		var label = xScale.getLabelForValue(controller.getParsed(0)[xScale.id]);
-		expect(label).toEqual('Jan 8, 2018, 5:14:23 am');
+		var xScale = chart.scales.xScale0;
+		var label = xScale.getLabelForIndex(0, 0);
+		expect(label).toEqual('Jan 8, 2018 5:14:23.234 am');
+	});
+
+	it('should get the correct label for a timestamp with time', function() {
+		var chart = window.acquireChart({
+			type: 'line',
+			data: {
+				datasets: [{
+					xAxisID: 'xScale0',
+					data: [
+						{t: +new Date('2018-01-08 05:14:23'), y: 10},
+						{t: +new Date('2018-01-09 06:17:43'), y: 3}
+					]
+				}],
+			},
+			options: {
+				scales: {
+					xAxes: [{
+						id: 'xScale0',
+						type: 'time',
+						position: 'bottom'
+					}],
+				}
+			}
+		});
+
+		var xScale = chart.scales.xScale0;
+		var label = xScale.getLabelForIndex(0, 0);
+		expect(label).toEqual('Jan 8, 2018 5:14:23 am');
+	});
+
+	it('should get the correct label for a timestamp representing a date', function() {
+		var chart = window.acquireChart({
+			type: 'line',
+			data: {
+				datasets: [{
+					xAxisID: 'xScale0',
+					data: [
+						{t: +new Date('2018-01-08 00:00:00'), y: 10},
+						{t: +new Date('2018-01-09 00:00:00'), y: 3}
+					]
+				}],
+			},
+			options: {
+				scales: {
+					xAxes: [{
+						id: 'xScale0',
+						type: 'time',
+						position: 'bottom'
+					}],
+				}
+			}
+		});
+
+		var xScale = chart.scales.xScale0;
+		var label = xScale.getLabelForIndex(0, 0);
+		expect(label).toEqual('Jan 8, 2018');
 	});
 
 	it('should get the correct pixel for only one data in the dataset', function() {
@@ -520,24 +699,25 @@ describe('Time scale tests', function() {
 			data: {
 				labels: ['2016-05-27'],
 				datasets: [{
-					xAxisID: 'x',
+					xAxisID: 'xScale0',
 					data: [5]
 				}]
 			},
 			options: {
 				scales: {
-					x: {
+					xAxes: [{
+						id: 'xScale0',
 						display: true,
 						type: 'time'
-					}
+					}]
 				}
 			}
 		});
 
-		var xScale = chart.scales.x;
-		var pixel = xScale.getPixelForValue(moment('2016-05-27').valueOf());
+		var xScale = chart.scales.xScale0;
+		var pixel = xScale.getPixelForValue('', 0, 0);
 
-		expect(xScale.getValueForPixel(pixel)).toEqual(moment(chart.data.labels[0]).valueOf());
+		expect(xScale.getValueForPixel(pixel).valueOf()).toEqual(moment(chart.data.labels[0]).valueOf());
 	});
 
 	it('does not create a negative width chart when hidden', function() {
@@ -550,13 +730,13 @@ describe('Time scale tests', function() {
 			},
 			options: {
 				scales: {
-					x: {
+					xAxes: [{
 						type: 'time',
-						ticks: {
+						time: {
 							min: moment().subtract(1, 'months'),
 							max: moment(),
 						}
-					},
+					}],
 				},
 				responsive: true,
 			},
@@ -565,8 +745,8 @@ describe('Time scale tests', function() {
 				style: 'display: none',
 			},
 		});
-		expect(chart.scales.y.width).toEqual(0);
-		expect(chart.scales.y.maxWidth).toEqual(0);
+		expect(chart.scales['y-axis-0'].width).toEqual(0);
+		expect(chart.scales['y-axis-0'].maxWidth).toEqual(0);
 		expect(chart.width).toEqual(0);
 	});
 
@@ -581,7 +761,8 @@ describe('Time scale tests', function() {
 					},
 					options: {
 						scales: {
-							x: {
+							xAxes: [{
+								id: 'x',
 								type: 'time',
 								time: {
 									parser: 'YYYY'
@@ -589,7 +770,7 @@ describe('Time scale tests', function() {
 								ticks: {
 									source: 'labels'
 								}
-							}
+							}]
 						}
 					}
 				});
@@ -600,35 +781,35 @@ describe('Time scale tests', function() {
 
 				expect(scale.min).toEqual(+moment('2017', 'YYYY'));
 				expect(scale.max).toEqual(+moment('2042', 'YYYY'));
-				expect(getLabels(scale)).toEqual([
+				expect(getTicksLabels(scale)).toEqual([
 					'2017', '2019', '2020', '2025', '2042']);
 			});
 			it ('should not add ticks for min and max if they extend the labels range', function() {
 				var chart = this.chart;
 				var scale = chart.scales.x;
-				var options = chart.options.scales.x;
+				var options = chart.options.scales.xAxes[0];
 
-				options.min = '2012';
-				options.max = '2051';
+				options.time.min = '2012';
+				options.time.max = '2051';
 				chart.update();
 
 				expect(scale.min).toEqual(+moment('2012', 'YYYY'));
 				expect(scale.max).toEqual(+moment('2051', 'YYYY'));
-				expect(getLabels(scale)).toEqual([
+				expect(getTicksLabels(scale)).toEqual([
 					'2017', '2019', '2020', '2025', '2042']);
 			});
 			it ('should not duplicate ticks if min and max are the labels limits', function() {
 				var chart = this.chart;
 				var scale = chart.scales.x;
-				var options = chart.options.scales.x;
+				var options = chart.options.scales.xAxes[0];
 
-				options.min = '2017';
-				options.max = '2042';
+				options.time.min = '2017';
+				options.time.max = '2042';
 				chart.update();
 
 				expect(scale.min).toEqual(+moment('2017', 'YYYY'));
 				expect(scale.max).toEqual(+moment('2042', 'YYYY'));
-				expect(getLabels(scale)).toEqual([
+				expect(getTicksLabels(scale)).toEqual([
 					'2017', '2019', '2020', '2025', '2042']);
 			});
 			it ('should correctly handle empty `data.labels` using "day" if `time.unit` is undefined`', function() {
@@ -640,12 +821,12 @@ describe('Time scale tests', function() {
 
 				expect(scale.min).toEqual(+moment().startOf('day'));
 				expect(scale.max).toEqual(+moment().endOf('day') + 1);
-				expect(getLabels(scale)).toEqual([]);
+				expect(getTicksLabels(scale)).toEqual([]);
 			});
 			it ('should correctly handle empty `data.labels` using `time.unit`', function() {
 				var chart = this.chart;
 				var scale = chart.scales.x;
-				var options = chart.options.scales.x;
+				var options = chart.options.scales.xAxes[0];
 
 				options.time.unit = 'year';
 				chart.data.labels = [];
@@ -653,7 +834,7 @@ describe('Time scale tests', function() {
 
 				expect(scale.min).toEqual(+moment().startOf('year'));
 				expect(scale.max).toEqual(+moment().endOf('year') + 1);
-				expect(getLabels(scale)).toEqual([]);
+				expect(getTicksLabels(scale)).toEqual([]);
 			});
 		});
 
@@ -674,7 +855,8 @@ describe('Time scale tests', function() {
 					},
 					options: {
 						scales: {
-							x: {
+							xAxes: [{
+								id: 'x',
 								type: 'time',
 								time: {
 									parser: 'YYYY'
@@ -682,7 +864,7 @@ describe('Time scale tests', function() {
 								ticks: {
 									source: 'data'
 								}
-							}
+							}]
 						}
 					}
 				});
@@ -693,35 +875,35 @@ describe('Time scale tests', function() {
 
 				expect(scale.min).toEqual(+moment('2017', 'YYYY'));
 				expect(scale.max).toEqual(+moment('2043', 'YYYY'));
-				expect(getLabels(scale)).toEqual([
+				expect(getTicksLabels(scale)).toEqual([
 					'2017', '2018', '2019', '2020', '2025', '2042', '2043']);
 			});
 			it ('should not add ticks for min and max if they extend the labels range', function() {
 				var chart = this.chart;
 				var scale = chart.scales.x;
-				var options = chart.options.scales.x;
+				var options = chart.options.scales.xAxes[0];
 
-				options.min = '2012';
-				options.max = '2051';
+				options.time.min = '2012';
+				options.time.max = '2051';
 				chart.update();
 
 				expect(scale.min).toEqual(+moment('2012', 'YYYY'));
 				expect(scale.max).toEqual(+moment('2051', 'YYYY'));
-				expect(getLabels(scale)).toEqual([
+				expect(getTicksLabels(scale)).toEqual([
 					'2017', '2018', '2019', '2020', '2025', '2042', '2043']);
 			});
 			it ('should not duplicate ticks if min and max are the labels limits', function() {
 				var chart = this.chart;
 				var scale = chart.scales.x;
-				var options = chart.options.scales.x;
+				var options = chart.options.scales.xAxes[0];
 
-				options.min = '2017';
-				options.max = '2043';
+				options.time.min = '2017';
+				options.time.max = '2043';
 				chart.update();
 
 				expect(scale.min).toEqual(+moment('2017', 'YYYY'));
 				expect(scale.max).toEqual(+moment('2043', 'YYYY'));
-				expect(getLabels(scale)).toEqual([
+				expect(getTicksLabels(scale)).toEqual([
 					'2017', '2018', '2019', '2020', '2025', '2042', '2043']);
 			});
 			it ('should correctly handle empty `data.labels` using "day" if `time.unit` is undefined`', function() {
@@ -733,13 +915,13 @@ describe('Time scale tests', function() {
 
 				expect(scale.min).toEqual(+moment('2018', 'YYYY'));
 				expect(scale.max).toEqual(+moment('2043', 'YYYY'));
-				expect(getLabels(scale)).toEqual([
+				expect(getTicksLabels(scale)).toEqual([
 					'2018', '2020', '2043']);
 			});
 			it ('should correctly handle empty `data.labels` and hidden datasets using `time.unit`', function() {
 				var chart = this.chart;
 				var scale = chart.scales.x;
-				var options = chart.options.scales.x;
+				var options = chart.options.scales.xAxes[0];
 
 				options.time.unit = 'year';
 				chart.data.labels = [];
@@ -749,7 +931,7 @@ describe('Time scale tests', function() {
 
 				expect(scale.min).toEqual(+moment().startOf('year'));
 				expect(scale.max).toEqual(+moment().endOf('year') + 1);
-				expect(getLabels(scale)).toEqual([]);
+				expect(getTicksLabels(scale)).toEqual([]);
 			});
 		});
 	});
@@ -765,7 +947,8 @@ describe('Time scale tests', function() {
 					},
 					options: {
 						scales: {
-							x: {
+							xAxes: [{
+								id: 'x',
 								type: 'time',
 								time: {
 									parser: 'YYYY'
@@ -774,10 +957,10 @@ describe('Time scale tests', function() {
 								ticks: {
 									source: 'labels'
 								}
-							},
-							y: {
+							}],
+							yAxes: [{
 								display: false
-							}
+							}]
 						}
 					}
 				});
@@ -788,54 +971,54 @@ describe('Time scale tests', function() {
 				var start = scale.left;
 				var slice = scale.width / 4;
 
-				expect(scale.getPixelForValue(moment('2017').valueOf())).toBeCloseToPixel(start);
-				expect(scale.getPixelForValue(moment('2019').valueOf())).toBeCloseToPixel(start + slice);
-				expect(scale.getPixelForValue(moment('2020').valueOf())).toBeCloseToPixel(start + slice * 2);
-				expect(scale.getPixelForValue(moment('2025').valueOf())).toBeCloseToPixel(start + slice * 3);
-				expect(scale.getPixelForValue(moment('2042').valueOf())).toBeCloseToPixel(start + slice * 4);
+				expect(scale.getPixelForValue('2017')).toBeCloseToPixel(start);
+				expect(scale.getPixelForValue('2019')).toBeCloseToPixel(start + slice);
+				expect(scale.getPixelForValue('2020')).toBeCloseToPixel(start + slice * 2);
+				expect(scale.getPixelForValue('2025')).toBeCloseToPixel(start + slice * 3);
+				expect(scale.getPixelForValue('2042')).toBeCloseToPixel(start + slice * 4);
 			});
 			it ('should add a step before if scale.min is before the first data', function() {
 				var chart = this.chart;
 				var scale = chart.scales.x;
-				var options = chart.options.scales.x;
+				var options = chart.options.scales.xAxes[0];
 
-				options.min = '2012';
+				options.time.min = '2012';
 				chart.update();
 
 				var start = scale.left;
 				var slice = scale.width / 5;
 
-				expect(scale.getPixelForValue(moment('2017').valueOf())).toBeCloseToPixel(start + slice);
-				expect(scale.getPixelForValue(moment('2042').valueOf())).toBeCloseToPixel(start + slice * 5);
+				expect(scale.getPixelForValue('2017')).toBeCloseToPixel(start + slice);
+				expect(scale.getPixelForValue('2042')).toBeCloseToPixel(start + slice * 5);
 			});
 			it ('should add a step after if scale.max is after the last data', function() {
 				var chart = this.chart;
 				var scale = chart.scales.x;
-				var options = chart.options.scales.x;
+				var options = chart.options.scales.xAxes[0];
 
-				options.max = '2050';
+				options.time.max = '2050';
 				chart.update();
 
 				var start = scale.left;
 				var slice = scale.width / 5;
 
-				expect(scale.getPixelForValue(moment('2017').valueOf())).toBeCloseToPixel(start);
-				expect(scale.getPixelForValue(moment('2042').valueOf())).toBeCloseToPixel(start + slice * 4);
+				expect(scale.getPixelForValue('2017')).toBeCloseToPixel(start);
+				expect(scale.getPixelForValue('2042')).toBeCloseToPixel(start + slice * 4);
 			});
 			it ('should add steps before and after if scale.min/max are outside the data range', function() {
 				var chart = this.chart;
 				var scale = chart.scales.x;
-				var options = chart.options.scales.x;
+				var options = chart.options.scales.xAxes[0];
 
-				options.min = '2012';
-				options.max = '2050';
+				options.time.min = '2012';
+				options.time.max = '2050';
 				chart.update();
 
 				var start = scale.left;
 				var slice = scale.width / 6;
 
-				expect(scale.getPixelForValue(moment('2017').valueOf())).toBeCloseToPixel(start + slice);
-				expect(scale.getPixelForValue(moment('2042').valueOf())).toBeCloseToPixel(start + slice * 5);
+				expect(scale.getPixelForValue('2017')).toBeCloseToPixel(start + slice);
+				expect(scale.getPixelForValue('2042')).toBeCloseToPixel(start + slice * 5);
 			});
 		});
 		describe('is "linear"', function() {
@@ -848,7 +1031,8 @@ describe('Time scale tests', function() {
 					},
 					options: {
 						scales: {
-							x: {
+							xAxes: [{
+								id: 'x',
 								type: 'time',
 								time: {
 									parser: 'YYYY'
@@ -857,10 +1041,10 @@ describe('Time scale tests', function() {
 								ticks: {
 									source: 'labels'
 								}
-							},
-							y: {
+							}],
+							yAxes: [{
 								display: false
-							}
+							}]
 						}
 					}
 				});
@@ -871,29 +1055,29 @@ describe('Time scale tests', function() {
 				var start = scale.left;
 				var slice = scale.width / (2042 - 2017);
 
-				expect(scale.getPixelForValue(moment('2017').valueOf())).toBeCloseToPixel(start);
-				expect(scale.getPixelForValue(moment('2019').valueOf())).toBeCloseToPixel(start + slice * (2019 - 2017));
-				expect(scale.getPixelForValue(moment('2020').valueOf())).toBeCloseToPixel(start + slice * (2020 - 2017));
-				expect(scale.getPixelForValue(moment('2025').valueOf())).toBeCloseToPixel(start + slice * (2025 - 2017));
-				expect(scale.getPixelForValue(moment('2042').valueOf())).toBeCloseToPixel(start + slice * (2042 - 2017));
+				expect(scale.getPixelForValue('2017')).toBeCloseToPixel(start);
+				expect(scale.getPixelForValue('2019')).toBeCloseToPixel(start + slice * (2019 - 2017));
+				expect(scale.getPixelForValue('2020')).toBeCloseToPixel(start + slice * (2020 - 2017));
+				expect(scale.getPixelForValue('2025')).toBeCloseToPixel(start + slice * (2025 - 2017));
+				expect(scale.getPixelForValue('2042')).toBeCloseToPixel(start + slice * (2042 - 2017));
 			});
 			it ('should take in account scale min and max if outside the ticks range', function() {
 				var chart = this.chart;
 				var scale = chart.scales.x;
-				var options = chart.options.scales.x;
+				var options = chart.options.scales.xAxes[0];
 
-				options.min = '2012';
-				options.max = '2050';
+				options.time.min = '2012';
+				options.time.max = '2050';
 				chart.update();
 
 				var start = scale.left;
 				var slice = scale.width / (2050 - 2012);
 
-				expect(scale.getPixelForValue(moment('2017').valueOf())).toBeCloseToPixel(start + slice * (2017 - 2012));
-				expect(scale.getPixelForValue(moment('2019').valueOf())).toBeCloseToPixel(start + slice * (2019 - 2012));
-				expect(scale.getPixelForValue(moment('2020').valueOf())).toBeCloseToPixel(start + slice * (2020 - 2012));
-				expect(scale.getPixelForValue(moment('2025').valueOf())).toBeCloseToPixel(start + slice * (2025 - 2012));
-				expect(scale.getPixelForValue(moment('2042').valueOf())).toBeCloseToPixel(start + slice * (2042 - 2012));
+				expect(scale.getPixelForValue('2017')).toBeCloseToPixel(start + slice * (2017 - 2012));
+				expect(scale.getPixelForValue('2019')).toBeCloseToPixel(start + slice * (2019 - 2012));
+				expect(scale.getPixelForValue('2020')).toBeCloseToPixel(start + slice * (2020 - 2012));
+				expect(scale.getPixelForValue('2025')).toBeCloseToPixel(start + slice * (2025 - 2012));
+				expect(scale.getPixelForValue('2042')).toBeCloseToPixel(start + slice * (2042 - 2012));
 			});
 		});
 	});
@@ -909,17 +1093,18 @@ describe('Time scale tests', function() {
 					},
 					options: {
 						scales: {
-							x: {
+							xAxes: [{
+								id: 'x',
 								type: 'time',
 								bounds: 'data',
 								time: {
 									parser: 'MM/DD HH:mm',
 									unit: 'day'
 								}
-							},
-							y: {
+							}],
+							yAxes: [{
 								display: false
-							}
+							}]
 						}
 					}
 				});
@@ -928,9 +1113,9 @@ describe('Time scale tests', function() {
 
 				expect(scale.min).toEqual(+moment('02/20 08:00', 'MM/DD HH:mm'));
 				expect(scale.max).toEqual(+moment('02/23 11:00', 'MM/DD HH:mm'));
-				expect(scale.getPixelForValue(moment('02/20 08:00', 'MM/DD HH:mm').valueOf())).toBeCloseToPixel(scale.left);
-				expect(scale.getPixelForValue(moment('02/23 11:00', 'MM/DD HH:mm').valueOf())).toBeCloseToPixel(scale.left + scale.width);
-				expect(getLabels(scale)).toEqual([
+				expect(scale.getPixelForValue('02/20 08:00')).toBeCloseToPixel(scale.left);
+				expect(scale.getPixelForValue('02/23 11:00')).toBeCloseToPixel(scale.left + scale.width);
+				expect(getTicksLabels(scale)).toEqual([
 					'Feb 21', 'Feb 22', 'Feb 23']);
 			});
 		});
@@ -945,17 +1130,18 @@ describe('Time scale tests', function() {
 					},
 					options: {
 						scales: {
-							x: {
+							xAxes: [{
+								id: 'x',
 								type: 'time',
 								bounds: 'ticks',
 								time: {
 									parser: 'MM/DD HH:mm',
 									unit: 'day'
 								}
-							},
-							y: {
+							}],
+							yAxes: [{
 								display: false
-							}
+							}]
 						}
 					}
 				});
@@ -965,15 +1151,15 @@ describe('Time scale tests', function() {
 
 				expect(scale.min).toEqual(ticks[0].value);
 				expect(scale.max).toEqual(ticks[ticks.length - 1].value);
-				expect(scale.getPixelForValue(moment('02/20 08:00', 'MM/DD HH:mm').valueOf())).toBeCloseToPixel(60);
-				expect(scale.getPixelForValue(moment('02/23 11:00', 'MM/DD HH:mm').valueOf())).toBeCloseToPixel(426);
-				expect(getLabels(scale)).toEqual([
+				expect(scale.getPixelForValue('02/20 08:00')).toBeCloseToPixel(60);
+				expect(scale.getPixelForValue('02/23 11:00')).toBeCloseToPixel(426);
+				expect(getTicksLabels(scale)).toEqual([
 					'Feb 20', 'Feb 21', 'Feb 22', 'Feb 23', 'Feb 24']);
 			});
 		});
 	});
 
-	describe('when min and/or max are defined', function() {
+	describe('when time.min and/or time.max are defined', function() {
 		['auto', 'data', 'labels'].forEach(function(source) {
 			['data', 'ticks'].forEach(function(bounds) {
 				describe('and ticks.source is "' + source + '" and bounds "' + bounds + '"', function() {
@@ -986,7 +1172,8 @@ describe('Time scale tests', function() {
 							},
 							options: {
 								scales: {
-									x: {
+									xAxes: [{
+										id: 'x',
 										type: 'time',
 										bounds: bounds,
 										time: {
@@ -996,10 +1183,10 @@ describe('Time scale tests', function() {
 										ticks: {
 											source: source
 										}
-									},
-									y: {
+									}],
+									yAxes: [{
 										display: false
-									}
+									}]
 								}
 							}
 						});
@@ -1008,45 +1195,41 @@ describe('Time scale tests', function() {
 					it ('should expand scale to the min/max range', function() {
 						var chart = this.chart;
 						var scale = chart.scales.x;
-						var options = chart.options.scales.x;
+						var options = chart.options.scales.xAxes[0];
 						var min = '02/19 07:00';
 						var max = '02/24 08:00';
-						var minMillis = +moment(min, 'MM/DD HH:mm');
-						var maxMillis = +moment(max, 'MM/DD HH:mm');
 
-						options.min = min;
-						options.max = max;
+						options.time.min = min;
+						options.time.max = max;
 						chart.update();
 
-						expect(scale.min).toEqual(minMillis);
-						expect(scale.max).toEqual(maxMillis);
-						expect(scale.getPixelForValue(minMillis)).toBeCloseToPixel(scale.left);
-						expect(scale.getPixelForValue(maxMillis)).toBeCloseToPixel(scale.left + scale.width);
+						expect(scale.min).toEqual(+moment(min, 'MM/DD HH:mm'));
+						expect(scale.max).toEqual(+moment(max, 'MM/DD HH:mm'));
+						expect(scale.getPixelForValue(min)).toBeCloseToPixel(scale.left);
+						expect(scale.getPixelForValue(max)).toBeCloseToPixel(scale.left + scale.width);
 						scale.getTicks().forEach(function(tick) {
-							expect(tick.value >= minMillis).toBeTruthy();
-							expect(tick.value <= maxMillis).toBeTruthy();
+							expect(tick.value >= +moment(min, 'MM/DD HH:mm')).toBeTruthy();
+							expect(tick.value <= +moment(max, 'MM/DD HH:mm')).toBeTruthy();
 						});
 					});
 					it ('should shrink scale to the min/max range', function() {
 						var chart = this.chart;
 						var scale = chart.scales.x;
-						var options = chart.options.scales.x;
+						var options = chart.options.scales.xAxes[0];
 						var min = '02/21 07:00';
 						var max = '02/22 20:00';
-						var minMillis = +moment(min, 'MM/DD HH:mm');
-						var maxMillis = +moment(max, 'MM/DD HH:mm');
 
-						options.min = min;
-						options.max = max;
+						options.time.min = min;
+						options.time.max = max;
 						chart.update();
 
-						expect(scale.min).toEqual(minMillis);
-						expect(scale.max).toEqual(maxMillis);
-						expect(scale.getPixelForValue(minMillis)).toBeCloseToPixel(scale.left);
-						expect(scale.getPixelForValue(maxMillis)).toBeCloseToPixel(scale.left + scale.width);
+						expect(scale.min).toEqual(+moment(min, 'MM/DD HH:mm'));
+						expect(scale.max).toEqual(+moment(max, 'MM/DD HH:mm'));
+						expect(scale.getPixelForValue(min)).toBeCloseToPixel(scale.left);
+						expect(scale.getPixelForValue(max)).toBeCloseToPixel(scale.left + scale.width);
 						scale.getTicks().forEach(function(tick) {
-							expect(tick.value >= minMillis).toBeTruthy();
-							expect(tick.value <= maxMillis).toBeTruthy();
+							expect(tick.value >= +moment(min, 'MM/DD HH:mm')).toBeTruthy();
+							expect(tick.value <= +moment(max, 'MM/DD HH:mm')).toBeTruthy();
 						});
 					});
 				});
@@ -1061,79 +1244,12 @@ describe('Time scale tests', function() {
 					this.chart = window.acquireChart({
 						type: 'line',
 						data: {
-							labels: ['2017', '2018', '2019', '2020', '2021'],
-							datasets: [{data: [0, 1, 2, 3, 4]}]
-						},
-						options: {
-							scales: {
-								x: {
-									type: 'time',
-									time: {
-										parser: 'YYYY',
-										unit: 'year'
-									},
-									ticks: {
-										source: source
-									},
-									distribution: distribution
-								}
-							}
-						}
-					});
-				});
-
-				it ('should not add offset from the edges', function() {
-					var scale = this.chart.scales.x;
-
-					expect(scale.getPixelForValue(moment('2017').valueOf())).toBeCloseToPixel(scale.left);
-					expect(scale.getPixelForValue(moment('2021').valueOf())).toBeCloseToPixel(scale.left + scale.width);
-				});
-
-				it ('should add offset from the edges if offset is true', function() {
-					var chart = this.chart;
-					var scale = chart.scales.x;
-					var options = chart.options.scales.x;
-
-					options.offset = true;
-					chart.update();
-
-					var numTicks = scale.ticks.length;
-					var firstTickInterval = scale.getPixelForTick(1) - scale.getPixelForTick(0);
-					var lastTickInterval = scale.getPixelForTick(numTicks - 1) - scale.getPixelForTick(numTicks - 2);
-
-					expect(scale.getPixelForValue(moment('2017').valueOf())).toBeCloseToPixel(scale.left + firstTickInterval / 2);
-					expect(scale.getPixelForValue(moment('2021').valueOf())).toBeCloseToPixel(scale.left + scale.width - lastTickInterval / 2);
-				});
-
-				it ('should not add offset if min and max extend the labels range', function() {
-					var chart = this.chart;
-					var scale = chart.scales.x;
-					var options = chart.options.scales.x;
-
-					options.min = '2012';
-					options.max = '2051';
-					chart.update();
-
-					expect(scale.getPixelForValue(moment('2012').valueOf())).toBeCloseToPixel(scale.left);
-					expect(scale.getPixelForValue(moment('2051').valueOf())).toBeCloseToPixel(scale.left + scale.width);
-				});
-			});
-		});
-	});
-
-	['data', 'labels'].forEach(function(source) {
-		['series', 'linear'].forEach(function(distribution) {
-			describe('when ticks.source is "' + source + '" and distribution is "' + distribution + '"', function() {
-				beforeEach(function() {
-					this.chart = window.acquireChart({
-						type: 'line',
-						data: {
 							labels: ['2017', '2019', '2020', '2025', '2042'],
 							datasets: [{data: [0, 1, 2, 3, 4, 5]}]
 						},
 						options: {
 							scales: {
-								x: {
+								xAxes: [{
 									id: 'x',
 									type: 'time',
 									time: {
@@ -1143,101 +1259,61 @@ describe('Time scale tests', function() {
 										source: source
 									},
 									distribution: distribution
-								}
+								}]
 							}
 						}
 					});
 				});
 
-				it ('should add offset if min and max extend the labels range and offset is true', function() {
+				it ('should not add offset from the edges', function() {
+					var scale = this.chart.scales.x;
+
+					expect(scale.getPixelForValue('2017')).toBeCloseToPixel(scale.left);
+					expect(scale.getPixelForValue('2042')).toBeCloseToPixel(scale.left + scale.width);
+				});
+
+				it ('should add offset from the edges if offset is true', function() {
 					var chart = this.chart;
 					var scale = chart.scales.x;
-					var options = chart.options.scales.x;
+					var options = chart.options.scales.xAxes[0];
 
-					options.min = '2012';
-					options.max = '2051';
 					options.offset = true;
 					chart.update();
 
 					var numTicks = scale.ticks.length;
 					var firstTickInterval = scale.getPixelForTick(1) - scale.getPixelForTick(0);
 					var lastTickInterval = scale.getPixelForTick(numTicks - 1) - scale.getPixelForTick(numTicks - 2);
-					expect(scale.getPixelForValue(moment('2012').valueOf())).toBeCloseToPixel(scale.left + firstTickInterval / 2);
-					expect(scale.getPixelForValue(moment('2051').valueOf())).toBeCloseToPixel(scale.left + scale.width - lastTickInterval / 2);
-				});
-			});
-		});
-	});
 
-	describe('Deprecations', function() {
-		describe('options.time.displayFormats', function() {
-			it('should generate defaults from adapter presets', function() {
-				var chart = window.acquireChart({
-					type: 'line',
-					data: {},
-					options: {
-						scales: {
-							x: {
-								type: 'time'
-							}
-						}
-					}
+					expect(scale.getPixelForValue('2017')).toBeCloseToPixel(scale.left + firstTickInterval / 2);
+					expect(scale.getPixelForValue('2042')).toBeCloseToPixel(scale.left + scale.width - lastTickInterval / 2);
 				});
 
-				// NOTE: built-in adapter uses moment
-				var expected = {
-					datetime: 'MMM D, YYYY, h:mm:ss a',
-					millisecond: 'h:mm:ss.SSS a',
-					second: 'h:mm:ss a',
-					minute: 'h:mm a',
-					hour: 'hA',
-					day: 'MMM D',
-					week: 'll',
-					month: 'MMM YYYY',
-					quarter: '[Q]Q - YYYY',
-					year: 'YYYY'
-				};
+				it ('should not add offset if min and max extend the labels range', function() {
+					var chart = this.chart;
+					var scale = chart.scales.x;
+					var options = chart.options.scales.xAxes[0];
 
-				expect(chart.scales.x.options.time.displayFormats).toEqual(expected);
-				expect(chart.options.scales.x.time.displayFormats).toEqual(expected);
-			});
+					options.time.min = '2012';
+					options.time.max = '2051';
+					chart.update();
 
-			it('should merge user formats with adapter presets', function() {
-				var chart = window.acquireChart({
-					type: 'line',
-					data: {},
-					options: {
-						scales: {
-							x: {
-								type: 'time',
-								time: {
-									displayFormats: {
-										millisecond: 'foo',
-										hour: 'bar',
-										month: 'bla'
-									}
-								}
-							}
-						}
-					}
+					expect(scale.getPixelForValue('2012')).toBeCloseToPixel(scale.left);
+					expect(scale.getPixelForValue('2051')).toBeCloseToPixel(scale.left + scale.width);
 				});
 
-				// NOTE: built-in adapter uses moment
-				var expected = {
-					datetime: 'MMM D, YYYY, h:mm:ss a',
-					millisecond: 'foo',
-					second: 'h:mm:ss a',
-					minute: 'h:mm a',
-					hour: 'bar',
-					day: 'MMM D',
-					week: 'll',
-					month: 'bla',
-					quarter: '[Q]Q - YYYY',
-					year: 'YYYY'
-				};
+				it ('should not add offset if min and max extend the labels range and offset is true', function() {
+					var chart = this.chart;
+					var scale = chart.scales.x;
+					var options = chart.options.scales.xAxes[0];
 
-				expect(chart.scales.x.options.time.displayFormats).toEqual(expected);
-				expect(chart.options.scales.x.time.displayFormats).toEqual(expected);
+					options.time.min = '2012';
+					options.time.max = '2051';
+					options.offset = true;
+					chart.update();
+
+					expect(scale.getPixelForValue('2012')).toBeCloseToPixel(scale.left);
+					expect(scale.getPixelForValue('2051')).toBeCloseToPixel(scale.left + scale.width);
+				});
 			});
 		});
 	});
