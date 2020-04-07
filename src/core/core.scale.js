@@ -101,12 +101,13 @@ function parseFontOptions(options) {
 	var size = valueOrDefault(options.fontSize, globalDefaults.defaultFontSize);
 	var style = valueOrDefault(options.fontStyle, globalDefaults.defaultFontStyle);
 	var family = valueOrDefault(options.fontFamily, globalDefaults.defaultFontFamily);
+	var func = valueOrDefault(options.fontFunction, null);
 
 	return {
 		size: size,
 		style: style,
 		family: family,
-		font: helpers.fontString(size, style, family)
+		font: func || helpers.fontString(size, style, family)
 	};
 }
 
@@ -818,7 +819,7 @@ module.exports = Element.extend({
 		});
 
 		// Draw all of the tick labels, tick marks, and grid lines at the correct places
-		helpers.each(itemsToDraw, function(itemToDraw) {
+		helpers.each(itemsToDraw, function(itemToDraw, index) {
 			if (gridLines.display) {
 				context.save();
 				context.lineWidth = itemToDraw.glWidth;
@@ -849,8 +850,18 @@ module.exports = Element.extend({
 				context.save();
 				context.translate(itemToDraw.labelX, itemToDraw.labelY);
 				context.rotate(itemToDraw.rotation);
-				context.font = itemToDraw.major ? majorTickFont.font : tickFont.font;
-				context.fillStyle = itemToDraw.major ? majorTickFontColor : tickFontColor;
+				if (typeof tickFont.font === 'function') {
+					context.font = tickFont.font(index);
+				} else {
+					context.font = itemToDraw.major ? majorTickFont.font : tickFont.font;
+				}
+				if (Object.prototype.toString.call(tickFontColor) === '[object Array]') {
+					context.fillStyle = itemToDraw.major ? majorTickFontColor[index] : tickFontColor[index];
+				} else if (typeof tickFontColor === 'function') {
+					context.fillStyle = tickFontColor(index);
+				} else {
+					context.fillStyle = itemToDraw.major ? majorTickFontColor : tickFontColor;
+				}
 				context.textBaseline = itemToDraw.textBaseline;
 				context.textAlign = itemToDraw.textAlign;
 
